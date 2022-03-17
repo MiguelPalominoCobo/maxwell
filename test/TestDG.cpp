@@ -387,9 +387,6 @@ TEST_F(DG, checkKOperators)
 	auto matrixS = sMat.SpMat().ToDenseMatrix();
 	auto matrixF = fMat.SpMat().ToDenseMatrix();
 
-	const int rowsK = matrixK->NumRows();
-	int colsK = matrixK->NumCols();
-
 	ASSERT_EQ(matrixK->NumRows(), matrixS->NumRows());
 	ASSERT_EQ(matrixK->NumCols(), matrixS->NumCols());
 	ASSERT_EQ(matrixK->NumRows(), matrixF->NumRows());
