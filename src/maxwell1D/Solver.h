@@ -4,39 +4,27 @@
 
 #include "FE_Evolution.h"
 
-namespace Maxwell1D {
+namespace maxwell1D {
 
 class Solver {
 public:
-    enum class TimeIntegrator {
-        Leapfrog,
-        RK4
-    };
-
-    typedef double ElectricField;
     typedef mfem::Vector Position;
-    typedef std::size_t Direction;
-    typedef std::size_t FieldType;
-
-    const Direction X = 0;
-
-    const FieldType Electric = 0;
-    const FieldType Magnetic = 1;
 
     struct Options {
         int order = 2;
-        double dt = 1e-4;
-        double t_final = 1000*dt;
-        int vis_steps = 100;
+        double dt = 1e-3;
+        double t_final = 1.0;
+        int vis_steps = 1;
         int precision = 8;
         bool paraview = false;
         bool glvis = false;
-        //TimeIntegrator timeIntegrator = Leapfrog;
+        FE_Evolution::Options evolutionOperatorOptions;
     };
 
     Solver(const Options&, const mfem::Mesh&);
 
-    void setInitialElectricField(std::function<ElectricField(const Position&)>);
+    void setInitialField(const FieldType&, std::function<double(const Position&)>);
+    const GridFunction& getField(const FieldType&) const;
 
     mfem::Mesh& getMesh() { return mesh_; }
 

@@ -1,6 +1,6 @@
 #include "BilinearIntegrators.h"
 
-namespace Maxwell1D {
+namespace maxwell1D {
 
 /*########################### EA START ###########################*/
 
@@ -372,10 +372,10 @@ static void PADGTraceSetup2D(const int Q1D,
                 const double negdot = n(q, 0, f) * v0 - n(q, 1, f) * v1;
                 const double abs = dot > 0.0 ? dot : -dot;
                 const double w = W[q] * r * d(q,f);
-                qd(q,0,0,f) = w * (alpha / 2 * dot + gamma * negdot);
-                qd(q,1,0,f) = w * (alpha / 2 * dot - gamma * negdot);
-                qd(q,0,1,f) = w * (-alpha / 2 * dot - gamma * negdot);
-                qd(q,1,1,f) = w * (-alpha / 2 * dot + gamma * negdot);
+                qd(q,0,0,f) = w * (alpha / 2 * dot + gamma * dot);
+                qd(q,1,0,f) = w * (alpha / 2 * dot - gamma * dot);
+                qd(q,0,1,f) = w * (-alpha / 2 * dot - gamma * dot);
+                qd(q,1,1,f) = w * (-alpha / 2 * dot + gamma * dot);
             }
         });
 }
@@ -419,10 +419,10 @@ static void PADGTraceSetup3D(const int Q1D,
                         /* */              n(q1,q2,2,f) * v2;
                         const double abs = dot > 0.0 ? dot : -dot;
                         const double w = W[q1 + q2 * Q1D] * r * d(q1,q2,f);
-                        qd(q1,q2,0,0,f) = w * (alpha / 2 * dot + gamma * abs);
-                        qd(q1,q2,1,0,f) = w * (alpha / 2 * dot - gamma * abs);
-                        qd(q1,q2,0,1,f) = w * (-alpha / 2 * dot - gamma * abs);
-                        qd(q1,q2,1,1,f) = w * (-alpha / 2 * dot + gamma * abs);
+                        qd(q1,q2,0,0,f) = w * (alpha / 2 * dot + gamma * dot);
+                        qd(q1,q2,1,0,f) = w * (alpha / 2 * dot - gamma * dot);
+                        qd(q1,q2,0,1,f) = w * (-alpha / 2 * dot - gamma * dot);
+                        qd(q1,q2,1,1,f) = w * (-alpha / 2 * dot + gamma * dot);
                     }
                 }
         });
@@ -1282,7 +1282,7 @@ static void PADGTraceApplyTranspose(const int dim,
     MFEM_ABORT("Unknown kernel.");
 }
 
-/*########################## MDG START  ##########################*/
+/*########################## MDG START ##########################*/
 //Has alpha (Done?)
 void MaxwellDGTraceIntegrator::AssembleFaceMatrix(const FiniteElement& el1,
     const FiniteElement& el2,
@@ -1291,7 +1291,7 @@ void MaxwellDGTraceIntegrator::AssembleFaceMatrix(const FiniteElement& el1,
 {
     int dim, ndof1, ndof2;
 
-    double un, a, b, g, w;
+    double un, a, b, w;
 
     dim = el1.GetDim();
     ndof1 = el1.GetDof();
@@ -1354,11 +1354,10 @@ void MaxwellDGTraceIntegrator::AssembleFaceMatrix(const FiniteElement& el1,
         {
             CalcOrtho(Trans.Jacobian(), nor);
         }
-
+        
         un = vu * nor;
         a = 0.5 * alpha * un;
-        //b = beta * fabs(un);
-        g = gamma * fabs(un);
+        b = beta;
         // note: if |alpha/2|==|beta| then |a|==|b|, i.e. (a==b) or (a==-b)
         //       and therefore two blocks in the element matrix contribution
         //       (from the current quadrature point) are 0
@@ -1375,11 +1374,10 @@ void MaxwellDGTraceIntegrator::AssembleFaceMatrix(const FiniteElement& el1,
                 rho_p = rho->Eval(*Trans.Elem1, eip1);
             }
             a *= rho_p;
-            //b *= rho_p;
-            g *= rho_p;
+            b *= rho_p;
         }
 
-        w = ip.weight * (a + g);
+        w = ip.weight * (a + b);
         if (w != 0.0)
         {
             for (int i = 0; i < ndof1; i++)
@@ -1400,7 +1398,7 @@ void MaxwellDGTraceIntegrator::AssembleFaceMatrix(const FiniteElement& el1,
                         elmat(ndof1 + i, j) -= w * shape2_(i) * shape1_(j);
                     }
 
-            w = ip.weight * (g - a);
+            w = ip.weight * (b - a);
             if (w != 0.0)
             {
                 for (int i = 0; i < ndof2; i++)
