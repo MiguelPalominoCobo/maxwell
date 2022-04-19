@@ -3,7 +3,7 @@
 
 #include "maxwell1D/Solver.h"
 
-using namespace Maxwell1D;
+using namespace maxwell1D;
 
 namespace AnalyticalFunctions1D {
 	mfem::Vector meshBoundingBoxMin, meshBoundingBoxMax;
@@ -15,7 +15,7 @@ namespace AnalyticalFunctions1D {
 		double normalizedPos;
 		double center = (meshBoundingBoxMin[0] + meshBoundingBoxMax[0]) * 0.5;
 		normalizedPos = 2.0 * (pos[0] - center) /
-			            (meshBoundingBoxMax[0] - meshBoundingBoxMin[0]);
+			            ((meshBoundingBoxMax[0] - meshBoundingBoxMin[0]));
 		
 		return exp(-20. * pow(normalizedPos, 2));
 	}
@@ -23,7 +23,7 @@ namespace AnalyticalFunctions1D {
 
 namespace HelperFunctions1D {
 
-	Mesh makeTwoAttributeCartesianMesh1D(const int& refTimes)
+	Mesh makeTwoAttributeCartesianMesh1D(const int& refTimes = 0)
 	{
 		Mesh res = Mesh::MakeCartesian1D(2);
 		res.SetAttribute(0, 1);
@@ -87,7 +87,7 @@ TEST_F(TestMaxwell1DSolver, checkTwoAttributeMesh)
 		}
 	}
 }
-TEST_F(TestMaxwell1DSolver, oneDimensional)
+TEST_F(TestMaxwell1DSolver, oneDimensional_centered)
 {
 	/*The purpose of this test is to check the run() function for the Solver class
 	and test the different available options.
@@ -100,20 +100,71 @@ TEST_F(TestMaxwell1DSolver, oneDimensional)
 
 	Lastly, the run() function is called.*/
 
-	int nx = 11;
+	int nx = 51;
 	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
 
-	Maxwell1D::Solver::Options opts;
-	opts.order = 3;
-	opts.dt = 1e-3;
-	opts.t_final = 1000 * opts.dt;
-	opts.vis_steps = 2;
-	opts.paraview = true;
+	maxwell1D::Solver::Options solverOpts;
+	
+	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
+	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
 
-	Maxwell1D::Solver solver(opts, mesh);
+	maxwell1D::Solver solver(solverOpts, mesh);
 	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
-
-	solver.setInitialElectricField(gaussianFunction);
+	solver.setInitialField(FieldType::Electric, gaussianFunction);
+	
+	Vector eOld = solver.getField(FieldType::Electric);
 	solver.run();
+	Vector eNew = solver.getField(FieldType::Electric);
+
+	double error = eOld.DistanceTo(eNew);
+	EXPECT_NEAR(0.0, error, 2e-3);
+
 }
 
+TEST_F(TestMaxwell1DSolver, oneDimensional_upwind_PEC)
+{
+	int nx = 51;
+	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
+
+	maxwell1D::Solver::Options solverOpts;
+
+	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
+
+	maxwell1D::Solver solver(solverOpts, mesh);
+	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
+	solver.setInitialField(FieldType::Electric, gaussianFunction);
+
+	Vector eOld = solver.getField(FieldType::Electric);
+	solver.run();
+	Vector eNew = solver.getField(FieldType::Electric);
+
+	double error = eOld.DistanceTo(eNew);
+	EXPECT_NEAR(0.0, error, 2e-3);
+
+}
+
+TEST_F(TestMaxwell1DSolver, oneDimensional_upwind_SMA)
+{
+	int nx = 51;
+	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
+
+	maxwell1D::Solver::Options solverOpts;
+	solverOpts.vis_steps = 25;
+	solverOpts.paraview = true;
+
+	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
+	solverOpts.evolutionOperatorOptions.bdrCond = BdrCond::SMA;
+
+	maxwell1D::Solver solver(solverOpts, mesh);
+	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
+	solver.setInitialField(FieldType::Electric, gaussianFunction);
+
+	solver.run();
+	Vector eNew = solver.getField(FieldType::Electric);
+	Vector zero = eNew;
+	zero = 0.0;
+
+	double error = zero.DistanceTo(eNew);
+	EXPECT_NEAR(0.0, error, 2e-3);
+
+}
