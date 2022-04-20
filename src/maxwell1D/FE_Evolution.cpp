@@ -6,10 +6,15 @@ namespace maxwell1D {
 	TimeDependentOperator(numberOfFieldComponents* fes->GetNDofs()),
 	opts_(options),
 	fes_(fes),
-	MInv_(buildInverseMassMatrix()),
-	K_(buildDerivativeOperator()),
-	FE_(buildFluxOperators(FieldType::Electric)),
-	FH_(buildFluxOperators(FieldType::Magnetic))
+	//MInv_(buildInverseMassMatrix()),
+	//K_(buildDerivativeOperator()),
+	//FE_(buildFluxOperators(FieldType::Electric)),
+	//FH_(buildFluxOperators(FieldType::Magnetic)),
+	MS_(buildMassAndStiffOperator()),
+	FEE_(buildMassAndPenaltyOperator(FieldType::Electric)),
+	FHH_(buildMassAndPenaltyOperator(FieldType::Magnetic)),
+	FEH_(buildMassAndFluxOperator(FieldType::Electric)),
+	FHE_(buildMassAndFluxOperator(FieldType::Magnetic))
 {
 }
 >>>>>>> 5b5d6a8da1ad6df994b51eb5266262e8bdfddd55
@@ -84,7 +89,7 @@ FE_Evolution::Operator FE_Evolution::buildPenaltyOperator(const FieldType& f) co
 	return res;
 }
 
-FE_Evolution::Operator FE_Evolution::applyMassOperatorOnOtherOperators(const OperatorType& optype, const FieldType& f) const
+FE_Evolution::Operator FE_Evolution::buildMassAndStiffOperator() const
 {
 	auto mass = buildInverseMassMatrix();
 	auto second = std::make_unique<BilinearForm>(fes_);
@@ -101,7 +106,12 @@ FE_Evolution::Operator FE_Evolution::applyMassOperatorOnOtherOperators(const Ope
 			break;
 	}
 
-	auto aux = mfem::Mult(mass->SpMat(), second->SpMat());
+FE_Evolution::Operator FE_Evolution::buildMassAndPenaltyOperator(const FieldType& f) const
+{
+	auto mass = buildInverseMassMatrix();
+	auto penalty = buildPenaltyOperator(f);
+
+	auto aux = mfem::Mult(mass->SpMat(), penalty->SpMat());
 
 	auto res = std::make_unique<BilinearForm>(fes_);
 	res->Assemble();
