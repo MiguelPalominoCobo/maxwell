@@ -17,6 +17,11 @@ public:
 		BdrCond bdrCond = BdrCond::PEC;
 	};
 
+	enum class OperatorType {
+		Stiffness,
+		Flux,
+		Penalty
+	};
 	static const std::size_t numberOfFieldComponents = 2;
 	
 	FE_Evolution(FiniteElementSpace* fes, Options options);
@@ -29,8 +34,9 @@ private:
 		double beta;
 	};
 
-	typedef std::pair<std::unique_ptr<BilinearForm>, std::unique_ptr<BilinearForm>> FluxOperators;
 
+	typedef std::pair<std::unique_ptr<BilinearForm>, std::unique_ptr<BilinearForm>> FluxOperators;
+	typedef std::unique_ptr<BilinearForm> Operator;
 
 	FiniteElementSpace* fes_;
 <<<<<<< HEAD
@@ -46,20 +52,10 @@ private:
 	Options opts_;
 >>>>>>> 5b5d6a8da1ad6df994b51eb5266262e8bdfddd55
 
-	std::unique_ptr<BilinearForm> MInv_, K_;
-	FluxOperators FE_, FH_;
+	Operator MS_, FEE_, FEH_, FHE_, FHH_;
 	
 	void constructBilinearForms();
 	std::unique_ptr<BilinearForm> buildInverseMassMatrix() const;
-<<<<<<< HEAD
-	std::unique_ptr<BilinearForm> buildDerivativeAndFluxOperator(
-		const Direction& d, const FieldType& ft) const;
-	std::unique_ptr<BilinearForm> buildDerivativeOperator(
-		const Direction& d, const FieldType& ft) const;
-	std::unique_ptr<BilinearForm> buildFluxOperator(
-		const Direction& d, const FieldType& ft) const;
-
-=======
 	std::unique_ptr<BilinearForm> buildDerivativeOperator() const;
 	FluxOperators buildFluxOperators(const FieldType&) const;
 	
