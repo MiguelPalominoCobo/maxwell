@@ -6,18 +6,13 @@ namespace maxwell1D {
 	TimeDependentOperator(numberOfFieldComponents* fes->GetNDofs()),
 	opts_(options),
 	fes_(fes),
-	//MInv_(buildInverseMassMatrix()),
-	//K_(buildDerivativeOperator()),
-	//FE_(buildFluxOperators(FieldType::Electric)),
-	//FH_(buildFluxOperators(FieldType::Magnetic)),
-	MS_(buildMassAndStiffOperator()),
-	FEE_(buildMassAndPenaltyOperator(FieldType::Electric)),
-	FHH_(buildMassAndPenaltyOperator(FieldType::Magnetic)),
-	FEH_(buildMassAndFluxOperator(FieldType::Electric)),
-	FHE_(buildMassAndFluxOperator(FieldType::Magnetic))
+	MS_(applyMassOperatorOnOtherOperators(OperatorType::Stiffness)),
+	FEE_(applyMassOperatorOnOtherOperators(OperatorType::Penalty, FieldType::Electric)),
+	FHH_(applyMassOperatorOnOtherOperators(OperatorType::Penalty, FieldType::Magnetic)),
+	FEH_(applyMassOperatorOnOtherOperators(OperatorType::Flux, FieldType::Electric)),
+	FHE_(applyMassOperatorOnOtherOperators(OperatorType::Flux, FieldType::Magnetic))
 {
 }
->>>>>>> 5b5d6a8da1ad6df994b51eb5266262e8bdfddd55
 
 	
 
@@ -89,7 +84,7 @@ FE_Evolution::Operator FE_Evolution::buildPenaltyOperator(const FieldType& f) co
 	return res;
 }
 
-FE_Evolution::Operator FE_Evolution::buildMassAndStiffOperator() const
+FE_Evolution::Operator FE_Evolution::applyMassOperatorOnOtherOperators(const OperatorType& optype, const FieldType& f) const
 {
 	auto mass = buildInverseMassMatrix();
 	auto second = std::make_unique<BilinearForm>(fes_);
@@ -106,12 +101,7 @@ FE_Evolution::Operator FE_Evolution::buildMassAndStiffOperator() const
 			break;
 	}
 
-FE_Evolution::Operator FE_Evolution::buildMassAndPenaltyOperator(const FieldType& f) const
-{
-	auto mass = buildInverseMassMatrix();
-	auto penalty = buildPenaltyOperator(f);
-
-	auto aux = mfem::Mult(mass->SpMat(), penalty->SpMat());
+	auto aux = mfem::Mult(mass->SpMat(), second->SpMat());
 
 	auto res = std::make_unique<BilinearForm>(fes_);
 	res->Assemble();
@@ -182,19 +172,14 @@ FE_Evolution::FluxCoefficient FE_Evolution::boundaryAltFluxCoefficient(const Fie
 }
 
 
-void FE_Evolution::constructBilinearForms()
-{
-	MInv_ = buildInverseMassMatrix();
-	K_ = buildDerivativeOperator();
-	FE_ = buildFluxOperators(FieldType::Electric);
-	FH_ = buildFluxOperators(FieldType::Magnetic);
-}
+//void FE_Evolution::constructBilinearForms()
+//{
+//	MInv_ = buildInverseMassMatrix();
+//	K_ = buildDerivativeOperator();
+//	FE_ = buildFluxOperators(FieldType::Electric);
+//	FH_ = buildFluxOperators(FieldType::Magnetic);
+//}
 
-	F->Assemble();
-	F->Finalize();
-
-	return F;
-}
 void FE_Evolution::Mult(const Vector& x, Vector& y) const
 {
 	Vector eOld(x.GetData(), fes_->GetNDofs());

@@ -39,18 +39,7 @@ private:
 	typedef std::unique_ptr<BilinearForm> Operator;
 
 	FiniteElementSpace* fes_;
-<<<<<<< HEAD
-	
-	std::unique_ptr<BilinearForm> MInv_;
-	std::unique_ptr<BilinearForm> KxE_;
-	std::unique_ptr<BilinearForm> KxH_;
-	std::unique_ptr<BilinearForm> SxE_;
-	std::unique_ptr<BilinearForm> SxH_;
-	std::unique_ptr<BilinearForm> FxE_;
-	std::unique_ptr<BilinearForm> FxH_;
-=======
 	Options opts_;
->>>>>>> 5b5d6a8da1ad6df994b51eb5266262e8bdfddd55
 
 	Operator MS_, FEE_, FEH_, FHE_, FHH_;
 	
@@ -61,10 +50,11 @@ private:
 	Operator buildFluxOperator(const FieldType&) const;
 	Operator buildPenaltyOperator(const FieldType&) const;
 
-	Operator buildMassAndStiffOperator() const;
-	Operator buildMassAndFluxOperator(const FieldType&) const;
-	Operator buildMassAndPenaltyOperator(const FieldType&) const;
-	
+	Operator applyMassOperatorOnOtherOperators(const OperatorType&, const FieldType& f = FieldType::Electric) const;
+
+	//Operator buildMassAndStiffOperator() const;
+	//Operator buildMassAndFluxOperator(const FieldType&) const;
+	//Operator buildMassAndPenaltyOperator(const FieldType&) const;
 	
 	FluxOperators buildFluxOperators(const FieldType&) const;
 	
@@ -72,7 +62,6 @@ private:
 	FluxCoefficient interiorAltFluxCoefficient() const;
 	FluxCoefficient boundaryFluxCoefficient(const FieldType&) const;
 	FluxCoefficient boundaryAltFluxCoefficient(const FieldType&) const;
->>>>>>> 5b5d6a8da1ad6df994b51eb5266262e8bdfddd55
 };
 
 
