@@ -1,4 +1,4 @@
-#include "Solver.h"
+#include "Solver1D.h"
 
 #include <fstream>
 #include <iostream>
@@ -6,9 +6,9 @@
 
 using namespace mfem;
 
-namespace maxwell1D {
+namespace maxwell {
 
-Solver::Solver(const Options& opts, const Mesh& mesh)
+Solver1D::Solver1D(const Options& opts, const Mesh& mesh)
 {
 	checkOptionsAreValid(opts, mesh);
 
@@ -22,7 +22,7 @@ Solver::Solver(const Options& opts, const Mesh& mesh)
 	odeSolver_ = std::make_unique<RK4Solver>();
 
 	maxwellEvol_ = std::make_unique<FE_Evolution>(fes_.get(), opts.evolutionOperatorOptions);
-	
+
 	sol_ = Vector(FE_Evolution::numberOfFieldComponents * fes_->GetNDofs());
 	sol_ = 0.0;
 
@@ -37,9 +37,13 @@ Solver::Solver(const Options& opts, const Mesh& mesh)
 	if (opts_.glvis) {
 		initializeGLVISData();
 	}
+	if (opts_.extractDataAtPoint) {
+		integPoint_ = setIntegrationPoint(opts_.integPoint);
+		fieldToExtract_ = opts_.fieldToExtract;
+	}
 }
 
-void Solver::checkOptionsAreValid(const Options& opts, const Mesh& mesh)
+void Solver1D::checkOptionsAreValid(const Options& opts, const Mesh& mesh)
 {
 	if (mesh.Dimension() != 1) {
 		throw std::exception("Incorrect Dimension for mesh");
@@ -53,7 +57,7 @@ void Solver::checkOptionsAreValid(const Options& opts, const Mesh& mesh)
 	}
 }
 
-mfem::Array<int> Solver::buildEssentialTrueDOF()
+mfem::Array<int> Solver1D::buildEssentialTrueDOF()
 {
 	Array<int> ess_tdof_list;
 	if (mesh_.bdr_attributes.Size())
@@ -65,7 +69,7 @@ mfem::Array<int> Solver::buildEssentialTrueDOF()
 	return ess_tdof_list;
 }
 
-void Solver::setInitialField(const FieldType& ft, std::function<double(const Position&)> f)
+void Solver1D::setInitialField(const FieldType& ft, std::function<double(const Position&)> f)
 {
 	switch (ft) {
 	case FieldType::Electric:
@@ -74,10 +78,10 @@ void Solver::setInitialField(const FieldType& ft, std::function<double(const Pos
 	case FieldType::Magnetic:
 		H_.ProjectCoefficient(FunctionCoefficient(f));
 		return;
-	}	
+	}
 }
 
-const GridFunction& Solver::getField(const FieldType& ft) const
+const GridFunction& Solver1D::getField(const FieldType& ft) const
 {
 	switch (ft) {
 	case FieldType::Electric:
@@ -87,7 +91,61 @@ const GridFunction& Solver::getField(const FieldType& ft) const
 	}
 }
 
-void Solver::initializeParaviewData()
+const int Solver1D::getElementIndexForPosition(const IntegrationPoint& ip) const
+{
+	Vector meshBoundingMin, meshBoundingMax;
+	Mesh meshc = Mesh(mesh_, true);
+	meshc.GetBoundingBox(meshBoundingMin, meshBoundingMax);
+	int res = (int)std::floor(ip.x / ((meshBoundingMax[0] - meshBoundingMin[0]) / meshc.GetNE())) - 1;
+	return res;
+}
+
+const Array<double> Solver1D::getVertexPositionInPhysicalCoords(const Array<int>& elementVertex) const
+{
+	Vector meshBoundingMin, meshBoundingMax;
+	Mesh meshc = Mesh(mesh_, true);
+	meshc.GetBoundingBox(meshBoundingMin, meshBoundingMax);
+	Array<double> res(elementVertex.Size());
+	const double vertexTop = meshc.GetNV() - 1;
+	for (int i = 0; i < elementVertex.Size(); i++) {
+		res[i] = (1.0 - ((vertexTop - elementVertex[i]) / vertexTop)) / (meshBoundingMax[0] - meshBoundingMin[0]);
+	}
+	return res;
+
+
+}
+
+const IntegrationPoint Solver1D::getRelativePositionInElement(const int& elementN, const IntegrationPoint& ip) const
+{
+	Array<int> aux;
+	mesh_.GetElementVertices(elementN, aux);
+	Array<double> auxPos = getVertexPositionInPhysicalCoords(aux);
+
+	IntegrationPoint res;
+	res.Set1w(((ip.x - auxPos[0]) / (auxPos[1] - auxPos[0])), 0.0);
+	return res;
+}
+
+const double Solver1D::saveFieldAtPoint(const IntegrationPoint& ip, const FieldType& ft) const
+{
+	switch (ft) {
+	case FieldType::Electric:
+		return E_.GetValue(getElementIndexForPosition(ip),
+			getRelativePositionInElement(getElementIndexForPosition(ip), ip));
+	case FieldType::Magnetic:
+		return H_.GetValue(getElementIndexForPosition(ip),
+			getRelativePositionInElement(getElementIndexForPosition(ip), ip));
+	}
+}
+
+const IntegrationPoint Solver1D::setIntegrationPoint(const IntegrationPoint& ip) const
+{
+	IntegrationPoint res;
+	res.Set1w(ip.x, ip.weight);
+	return res;
+}
+
+void Solver1D::initializeParaviewData()
 {
 	pd_ = NULL;
 	pd_ = std::make_unique<ParaViewDataCollection>("MaxwellView1D", &mesh_);
@@ -99,7 +157,7 @@ void Solver::initializeParaviewData()
 	opts_.order > 0 ? pd_->SetHighOrderOutput(true) : pd_->SetHighOrderOutput(false);
 }
 
-void Solver::initializeGLVISData() 
+void Solver1D::initializeGLVISData()
 {
 	char vishost[] = "localhost";
 	int  visport = 19916;
@@ -112,7 +170,7 @@ void Solver::initializeGLVISData()
 		<< " Press space (in the GLVis window) to resume it.\n";
 }
 
-void Solver::storeInitialVisualizationValues() 
+void Solver1D::storeInitialVisualizationValues()
 {
 	if (opts_.paraview) {
 		pd_->SetCycle(0);
@@ -132,10 +190,10 @@ void Solver::storeInitialVisualizationValues()
 	}
 }
 
-void Solver::run()
+void Solver1D::run()
 {
 	Vector vals(2 * fes_.get()->GetVSize());
-	
+
 	double time = 0.0;
 
 	maxwellEvol_->SetTime(time);
@@ -143,17 +201,38 @@ void Solver::run()
 
 	storeInitialVisualizationValues();
 
+	if (opts_.extractDataAtPoint) {
+		timeRecord_.SetSize(std::ceil(opts_.t_final / opts_.dt));
+		fieldRecord_.SetSize(std::ceil(opts_.t_final / opts_.dt));
+	}
+
 	bool done = false;
 	int cycle = 0;
 
 	while (!done) {
 		odeSolver_->Step(sol_, time, opts_.dt);
 
+		if (opts_.extractDataAtPoint) {
+			timeRecord_[cycle] = time;
+			fieldRecord_[cycle] = saveFieldAtPoint(integPoint_, fieldToExtract_);
+		}
+
 		done = (time >= opts_.t_final);
 
 		cycle++;
 
 		if (done || cycle % opts_.vis_steps == 0) {
+			if (opts_.extractDataAtPoint) {
+
+				timeField_.SetSize(std::ceil(opts_.t_final / opts_.dt) * 2);
+
+				for (int i = 0; i < timeField_.Size()/2; i++) {
+
+					timeField_.Elem(i) = timeRecord_.Elem(i);
+					timeField_.Elem(i + timeField_.Size() / 2) = fieldRecord_.Elem(i);
+
+				}
+			}
 			if (opts_.paraview) {
 				pd_->SetCycle(cycle);
 				pd_->SetTime(time);

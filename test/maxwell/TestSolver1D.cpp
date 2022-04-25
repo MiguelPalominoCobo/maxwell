@@ -1,9 +1,9 @@
 #include "gtest/gtest.h"
 #include <math.h>
 
-#include "maxwell1D/Solver.h"
+#include "maxwell/Solver1D.h"
 
-using namespace maxwell1D;
+using namespace maxwell;
 
 namespace AnalyticalFunctions1D {
 	mfem::Vector meshBoundingBoxMin, meshBoundingBoxMax;
@@ -18,6 +18,16 @@ namespace AnalyticalFunctions1D {
 			            ((meshBoundingBoxMax[0] - meshBoundingBoxMin[0]));
 		
 		return exp(-20. * pow(normalizedPos, 2));
+	}
+
+	double gaussianFunctionHalf(const mfem::Vector pos)
+	{
+		double normalizedPos;
+		double center = (meshBoundingBoxMin[0] + meshBoundingBoxMax[0]) * 0.5;
+		normalizedPos = 2.0 * (pos[0] - center) /
+			((meshBoundingBoxMax[0] - meshBoundingBoxMin[0]));
+
+		return exp(-20. * pow(normalizedPos, 2))/2;
 	}
 }
 
@@ -39,7 +49,7 @@ namespace HelperFunctions1D {
 }
 using namespace AnalyticalFunctions1D;
 
-class TestMaxwell1DSolver : public ::testing::Test {
+class TestMaxwellSolver1D : public ::testing::Test {
 protected:
 	
 	std::vector<int> mapQuadElementTopLeftVertex(const mfem::Mesh& mesh) 
@@ -55,7 +65,7 @@ protected:
 	}
 };
 
-TEST_F(TestMaxwell1DSolver, checkTwoAttributeMesh)
+TEST_F(TestMaxwellSolver1D, checkTwoAttributeMesh)
 {
 	/*The purpose of this test is to check the makeTwoAttributeCartesianMesh1D(const int& refTimes) 
 	function.
@@ -87,15 +97,15 @@ TEST_F(TestMaxwell1DSolver, checkTwoAttributeMesh)
 		}
 	}
 }
-TEST_F(TestMaxwell1DSolver, oneDimensional_centered)
+TEST_F(TestMaxwellSolver1D, oneDimensional_centered)
 {
-	/*The purpose of this test is to check the run() function for the Solver class
+	/*The purpose of this test is to check the run() function for the Solver1D class
 	and test the different available options.
 
 	First, dimensional variables are declared and a mesh is constructed, along with the declaration
 	of different useful variables.
 
-	Then, a Solver object is constructed using said mesh and options, the bounding box for its mesh
+	Then, a Solver1D object is constructed using said mesh and options, the bounding box for its mesh
 	is extracted and an initial condition is applied to one of its variables. (GridFunction Ez_)
 
 	Lastly, the run() function is called.*/
@@ -103,12 +113,12 @@ TEST_F(TestMaxwell1DSolver, oneDimensional_centered)
 	int nx = 51;
 	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
 
-	maxwell1D::Solver::Options solverOpts;
+	maxwell::Solver1D::Options solverOpts;
 	
 	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
 
-	maxwell1D::Solver solver(solverOpts, mesh);
+	maxwell::Solver1D solver(solverOpts, mesh);
 	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
 	solver.setInitialField(FieldType::Electric, gaussianFunction);
 	
@@ -121,16 +131,16 @@ TEST_F(TestMaxwell1DSolver, oneDimensional_centered)
 
 }
 
-TEST_F(TestMaxwell1DSolver, oneDimensional_upwind_PEC)
+TEST_F(TestMaxwellSolver1D, oneDimensional_upwind_PEC)
 {
 	int nx = 51;
 	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
 
-	maxwell1D::Solver::Options solverOpts;
+	maxwell::Solver1D::Options solverOpts;
 
 	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
 
-	maxwell1D::Solver solver(solverOpts, mesh);
+	maxwell::Solver1D solver(solverOpts, mesh);
 	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
 	solver.setInitialField(FieldType::Electric, gaussianFunction);
 
@@ -143,28 +153,57 @@ TEST_F(TestMaxwell1DSolver, oneDimensional_upwind_PEC)
 
 }
 
-TEST_F(TestMaxwell1DSolver, oneDimensional_upwind_SMA)
+TEST_F(TestMaxwellSolver1D, oneDimensional_upwind_PMC)
 {
 	int nx = 51;
 	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
 
-	maxwell1D::Solver::Options solverOpts;
-	solverOpts.vis_steps = 25;
-	solverOpts.paraview = true;
+	maxwell::Solver1D::Options solverOpts;
 
 	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
-	solverOpts.evolutionOperatorOptions.bdrCond = BdrCond::SMA;
+	solverOpts.evolutionOperatorOptions.bdrCond = BdrCond::PMC;
 
-	maxwell1D::Solver solver(solverOpts, mesh);
+	maxwell::Solver1D solver(solverOpts, mesh);
+	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
+	solver.setInitialField(FieldType::Magnetic, gaussianFunction);
+
+	Vector hOld = solver.getField(FieldType::Magnetic);
+	solver.run();
+	Vector hNew = solver.getField(FieldType::Magnetic);
+
+	double error = hOld.DistanceTo(hNew);
+	EXPECT_NEAR(0.0, error, 2e-3);
+
+}
+
+TEST_F(TestMaxwellSolver1D, oneDimensional_upwind_SMA)
+{
+	int nx = 51;
+	mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(nx);
+
+	maxwell::Solver1D::Options solverOpts;
+	solverOpts.evolutionOperatorOptions = FE_Evolution::Options();
+	solverOpts.evolutionOperatorOptions.bdrCond = BdrCond::SMA;
+	solverOpts.extractDataAtPoint = true;
+	IntegrationPoint ip;
+	double xPos = 1.0;
+	ip.Set1w(xPos, 0.0);
+	solverOpts.integPoint = ip;
+
+	maxwell::Solver1D solver(solverOpts, mesh);
 	solver.getMesh().GetBoundingBox(meshBoundingBoxMin, meshBoundingBoxMax);
 	solver.setInitialField(FieldType::Electric, gaussianFunction);
 
 	solver.run();
+
 	Vector eNew = solver.getField(FieldType::Electric);
 	Vector zero = eNew;
 	zero = 0.0;
-
 	double error = zero.DistanceTo(eNew);
 	EXPECT_NEAR(0.0, error, 2e-3);
 
+	Vector ePoint = solver.getFieldAtPoint();
+	for (int i = ePoint.Size() / 2; i < ePoint.Size(); i++) {
+		EXPECT_LE(ePoint[i],1.0);
+	}
 }
