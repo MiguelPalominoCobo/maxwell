@@ -1,10 +1,14 @@
 #pragma once
 
+#include "mfem.hpp"
+
 namespace maxwell {
 
-enum class FieldType {
-	Electric,
-	Magnetic
+using Position = mfem::Vector;
+
+enum FieldType {
+	E,
+	H
 };
 
 enum class FluxType {
@@ -16,6 +20,12 @@ enum class BdrCond {
 	PEC,
 	PMC,
 	SMA
+};
+
+enum Direction {
+	X,
+	Y,
+	Z
 };
 
 
