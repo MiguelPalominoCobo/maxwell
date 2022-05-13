@@ -293,25 +293,25 @@ void FiniteElementEvolutionNoCond::Mult(const Vector& in, Vector& out) const
 		int y = (x + 1) % 3;
 		int z = (x + 2) % 3;
 
-		// dtE_x = MS_y * H_z - MF_y * {H_z} - MP_E * [E_x] +
-		//        -MS_z * H_y + MF_z * {H_y} + MP_E * [E_x]
+		// dtE_x = MS_y * H_z - MF_y * {H_z} - MP_E * [E_z] +
+		//        -MS_z * H_y + MF_z * {H_y} + MP_E * [E_y]
 		// 
 		// Update E. M built with eps term.
 		MS_[E][y]   ->Mult   (hOld[z], eNew[x]);
 		MF_[E][H][y]->AddMult(hOld[z], eNew[x], -1.0);
-		MP_[E][E]   ->AddMult(eOld[x], eNew[x], -1.0);
+		MP_[E][E]   ->AddMult(eOld[z], eNew[x], -1.0);
 		MS_[E][z]   ->AddMult(hOld[y], eNew[x], -1.0);
 		MF_[E][H][z]->AddMult(hOld[y], eNew[x],  1.0);
-		MP_[E][E]   ->AddMult(eOld[x], eNew[x],  1.0);
+		MP_[E][E]   ->AddMult(eOld[y], eNew[x],  1.0);
 
 		// Update H.
 
 		MS_[H][z]   ->Mult   (eOld[y], hNew[x]);
 		MF_[H][E][z]->AddMult(eOld[y], hNew[x], -1.0);
-		MP_[H][H]   ->AddMult(hOld[x], hNew[x], -1.0);
+		MP_[H][H]   ->AddMult(hOld[y], hNew[x], -1.0);
 		MS_[H][y]   ->AddMult(eOld[z], hNew[x], -1.0);
 		MF_[H][E][y]->AddMult(eOld[z], hNew[x],  1.0);
-		MP_[H][H]   ->AddMult(hOld[x], hNew[x],  1.0);
+		MP_[H][H]   ->AddMult(hOld[z], hNew[x],  1.0);
 	}
 }
 
