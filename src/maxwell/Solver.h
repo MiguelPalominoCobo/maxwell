@@ -16,8 +16,6 @@ class Solver {
 public:
 
     using IntegrationPointsSet = std::vector<std::vector<IntegrationPoint>>;
-    using FieldByVDIM = std::vector<std::array<double, 3>>;
-    using TimeFieldPair = std::vector<std::pair<double, FieldByVDIM>>;
     
     struct Options {
         int order = 2;
@@ -26,21 +24,20 @@ public:
         FiniteElementEvolutionNoCond::Options evolutionOperatorOptions;
     };
 
-    Solver(const Model&, const Probes&, const Sources&, const Options&);
+    Solver(const Model&, Probes&, const Sources&, const Options&);
 
     void setInitialField();
     const GridFunction& getFieldInDirection(const FieldType&, const Direction&) const;
-    const Vector& getMaterialProperties(const Material&) const;
+    const Probe& getProbe(const std::size_t probe) const { return probes_.getProbeVector().at(probe); }
 
     mfem::Mesh& getMesh() { return mesh_; }
-    TimeFieldPair& getFieldAtPoint() { return timeField_; }
 
     void run();
 
 private:
 
     Model model_;
-    Probes probes_;
+    Probes& probes_;
     Sources sources_;
     Options opts_;
     
@@ -59,12 +56,10 @@ private:
 
     std::array<GridFunction, 3> E_, H_;
 
-    Array<int> elemIds_;
-    IntegrationPointsSet integPointSet_;
-    FieldType fieldToExtract_;
+    std::vector<Array<int>> elemIds_;
+    std::vector<IntegrationPointsSet> integPointSet_;
     double timeRecord_;
-    FieldByVDIM fieldRecord_;
-    std::vector<std::pair<double, FieldByVDIM>> timeField_;
+    std::vector<FieldFrame> fieldRecord_;
 
     std::unique_ptr<mfem::ParaViewDataCollection> pd_;
 
@@ -72,9 +67,9 @@ private:
 
     void checkOptionsAreValid(const Options&);
 
-    std::pair<Array<int>,Array<IntegrationPoint>> Solver::buildElemAndIntegrationPointArrays(DenseMatrix& physPoints);
+    std::vector<std::pair<Array<int>, Array<IntegrationPoint>>> Solver::buildElemAndIntegrationPointArrays(DenseMatrix& physPoints);
     const IntegrationPointsSet Solver::buildIntegrationPointsSet(const Array<IntegrationPoint>& ipArray) const;
-    const FieldByVDIM saveFieldAtPoints(const FieldType&);
+    const std::vector<FieldFrame> saveFieldAtPointsForAllProbes();
 
     void initializeParaviewData();
     //void initializeGLVISData();

@@ -33,7 +33,8 @@ namespace AnalyticalFunctions1D {
 
 namespace HelperFunctions {
 
-	Mesh makeTwoAttributeCartesianMesh1D(const int& refTimes = 0)
+	Mesh makeTwoAttributeCartesianMesh1D(
+		const int& refTimes = 0)
 	{
 		Mesh res = Mesh::MakeCartesian1D(2);
 		res.SetAttribute(0, 1);
@@ -46,16 +47,24 @@ namespace HelperFunctions {
 		return res;
 	}
 
-	void setAttributeIntervalMesh(const int& attVal, const Vector& elIndexes, Mesh& mesh)
+	void setAttributeIntervalMesh(
+		const int& attVal, 
+		const Array<int>& elIndexes, 
+		Mesh& mesh)
 	{
-		assert(elIndexes[0] < elIndexes[1], "Lower Index bigger than Higher Index.");
-		assert(elIndexes[1] <= mesh.GetNE(), "Declared element index bigger than Mesh Number of Elements.");
-			for (int i = elIndexes[0] - 1; i < elIndexes[1]; i++) {
-				mesh.SetAttribute(i, attVal);
-			}
+		if (elIndexes.begin() > elIndexes.end()) {
+			throw std::exception("Lower Index bigger than Higher Index.");
+		}
+		if (elIndexes[1] > mesh.GetNE()) {
+			throw std::exception("Declared element index bigger than Mesh Number of Elements.");
+		}
+		for (int i = elIndexes[0]; i <= elIndexes[1]; i++) {
+			mesh.SetAttribute(i, attVal);
+		}
 	}
 
-	std::vector<int> mapQuadElementTopLeftVertex(const mfem::Mesh& mesh)
+	std::vector<int> mapQuadElementTopLeftVertex(
+		const mfem::Mesh& mesh)
 	{
 		std::vector<int> res;
 		for (int i = 0; i < mesh.GetNE(); i++) {
@@ -67,13 +76,29 @@ namespace HelperFunctions {
 		return res;
 	}
 
-	std::vector<std::pair<attribute, Material>> buildAttToMatVec(const std::vector<attribute>& attVec, const std::vector<Material>& matVec)
+	AttributeToMaterial buildAttToMatVec(
+		const std::vector<Attribute>& attVec, 
+		const std::vector<Material>& matVec)
 	{
-		std::vector<std::pair<attribute, Material>> res;
+		AttributeToMaterial res;
 		for (int i = 0; i < attVec.size(); i++) {
-			res.push_back(std::make_pair(attVec[i], matVec[i]));
+			res.emplace(attVec[i], matVec[i]);
 		}
 		return res;
+	}
+
+	std::map<Time, FieldFrame>::const_iterator findTimeId(
+		const std::map<Time, FieldFrame>& timeMap,
+		const Time& timeToFind,
+		const double tolerance)
+	{
+		for (auto it = timeMap.begin(); it != timeMap.end(); it++) {
+			const Time& time = it->first;
+			if (abs(time - timeToFind) < tolerance) {
+				return it;
+			}
+		}
+		return timeMap.end();
 	}
 }
 using namespace AnalyticalFunctions1D;
@@ -81,32 +106,39 @@ using namespace AnalyticalFunctions1D;
 class TestMaxwellSolver1D : public ::testing::Test {
 protected:
 
-	Mesh mesh1D = Mesh::MakeCartesian1D(51,1.0);
-	Mesh mesh2D = Mesh::MakeCartesian2D(20, 20, Element::Type::QUADRILATERAL, 1.0, 1.0);
-	Mesh mesh3D = Mesh::MakeCartesian3D(10, 10, 10, Element::Type::HEXAHEDRON, 1.0, 1.0, 1.0);
-	
-	Material mat11 = Material(1.0, 1.0); Material mat12 = Material(1.0, 2.0);
-	Material mat21 = Material(2.0, 1.0); Material mat22 = Material(2.0, 2.0);
-	
-	std::vector<attribute> attArrSingle = std::vector<attribute>({ 1 });
-	std::vector<attribute> attArrMultiple = std::vector<attribute>({ 1, 2, 3, 4 });
-	std::vector<Material> matArrSimple = std::vector<Material>({ mat11 });
-	std::vector<Material> matArrMultiple = std::vector<Material>({ mat11,mat12,mat21,mat22 });
+	Model buildOneDimFourMatModel(
+		const int meshIntervals) {
 
-	std::vector<std::pair<attribute, Material>> attToMatVec = HelperFunctions::buildAttToMatVec(attArrSingle, matArrSimple);
+		std::vector<Attribute> attArrMultiple = std::vector<Attribute>({ 1, 2, 3, 4 });
+		Material mat11 = Material(1.0, 1.0); Material mat12 = Material(1.0, 2.0);
+		Material mat21 = Material(2.0, 1.0); Material mat22 = Material(2.0, 2.0);
+		std::vector<Material> matArrMultiple;
+		matArrMultiple.push_back(mat11); matArrMultiple.push_back(mat12);
+		matArrMultiple.push_back(mat21); matArrMultiple.push_back(mat22);
+		AttributeToMaterial attToMatVec = HelperFunctions::buildAttToMatVec(attArrMultiple, matArrMultiple);
+		return Model(Mesh::MakeCartesian1D(meshIntervals, 1.0), attToMatVec);
+	}
 
-	Model testModel = Model(mesh1D, attToMatVec);
+	Model buildOneDimOneMatModel(
+		const int meshIntervals = 51) {
 
-	double spread = 2.0;
-	double delay = 0.0;
-	Direction d = Y;
-	FieldType ft = E;
+		std::vector<Attribute> attArrSingle = std::vector<Attribute>({ 1 });
+		Material mat11 = Material(1.0, 1.0);
+		std::vector<Material> matArrSimple = std::vector<Material>({ mat11 });
+		AttributeToMaterial attToMatVec = HelperFunctions::buildAttToMatVec(attArrSingle, matArrSimple);
+		return Model(Mesh::MakeCartesian1D(meshIntervals, 1.0), attToMatVec);
+	}
 
-	Source testSource = Source(testModel, spread, delay, d, ft);
+	Source buildSourceOneDimOneMat(
+		const int meshIntervals = 51, 
+		const double spread = 2.0, 
+		const double coeff = 1.0, 
+		const double dev = 0.0,
+		const Direction& d = Y, 
+		const FieldType& ft = E){
 
-	Probes defaultProbes;
-
-	Options defaultOptions;
+		return Source(buildOneDimOneMatModel(meshIntervals), spread, coeff, dev, d, ft);
+	}
 
 };
 
@@ -161,21 +193,20 @@ TEST_F(TestMaxwellSolver1D, oneDimensional_centered)
 	
 	solverOpts.evolutionOperatorOptions = FiniteElementEvolutionNoCond::Options();
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
-	solverOpts.t_final = 1.0;
+	solverOpts.t_final = 2.0;
 	solverOpts.dt = 1e-3;
 
-	Probes probes = TestMaxwellSolver1D::defaultProbes;
-	probes.paraview = true;
-	probes.vis_steps = 100;
+	Probes probes;
+	//probes.paraview = true;
+	probes.vis_steps = 50;
 
 	Sources sources;
-	sources.addSourceToVector(TestMaxwellSolver1D::testSource);
+	sources.addSourceToVector(TestMaxwellSolver1D::buildSourceOneDimOneMat());
 
-	maxwell::Solver solver(TestMaxwellSolver1D::testModel, probes, 
+	maxwell::Solver solver(TestMaxwellSolver1D::buildOneDimOneMatModel(), probes, 
 						sources, solverOpts);
 	
 	GridFunction eOld = solver.getFieldInDirection(E, Y);
-	eOld.Neg();
 	solver.run();
 	GridFunction eNew = solver.getFieldInDirection(E, Y);
 
@@ -192,18 +223,17 @@ TEST_F(TestMaxwellSolver1D, oneDimensional_upwind_PEC)
 	solverOpts.t_final = 2.0;
 	solverOpts.dt = 1e-3;
 
-	Probes probes = TestMaxwellSolver1D::defaultProbes;
+	Probes probes;
 	//probes.paraview = true;
 	probes.vis_steps = 50;
 
 	Sources sources;
-	sources.addSourceToVector(TestMaxwellSolver1D::testSource);
+	sources.addSourceToVector(TestMaxwellSolver1D::buildSourceOneDimOneMat());
 
-	maxwell::Solver solver(TestMaxwellSolver1D::testModel, probes,
+	maxwell::Solver solver(TestMaxwellSolver1D::buildOneDimOneMatModel(), probes,
 		sources, solverOpts);
 
 	GridFunction eOld = solver.getFieldInDirection(E, Y);
-	//eOld.Neg();
 	solver.run();
 	GridFunction eNew = solver.getFieldInDirection(E, Y);
 
@@ -221,14 +251,14 @@ TEST_F(TestMaxwellSolver1D, oneDimensional_upwind_PMC)
 	solverOpts.t_final = 1.0;
 	solverOpts.dt = 1e-3;
 
-	Probes probes = TestMaxwellSolver1D::defaultProbes;
+	Probes probes;
 	//probes.paraview = true;
 	probes.vis_steps = 5;
 
 	Sources sources;
-	sources.addSourceToVector(TestMaxwellSolver1D::testSource);
+	sources.addSourceToVector(TestMaxwellSolver1D::buildSourceOneDimOneMat());
 
-	maxwell::Solver solver(TestMaxwellSolver1D::testModel, probes,
+	maxwell::Solver solver(TestMaxwellSolver1D::buildOneDimOneMatModel(), probes,
 		sources, solverOpts);
 
 	GridFunction hOld = solver.getFieldInDirection(H, Z);
@@ -249,14 +279,14 @@ TEST_F(TestMaxwellSolver1D, oneDimensional_upwind_SMA)
 	solverOpts.t_final = 1.0;
 	solverOpts.dt = 1e-3;
 
-	Probes probes = TestMaxwellSolver1D::defaultProbes;
+	Probes probes;
 	//probes.paraview = true;
 	probes.vis_steps = 5;
 
 	Sources sources;
-	sources.addSourceToVector(TestMaxwellSolver1D::testSource);
+	sources.addSourceToVector(TestMaxwellSolver1D::buildSourceOneDimOneMat());
 
-	maxwell::Solver solver(TestMaxwellSolver1D::testModel, probes,
+	maxwell::Solver solver(TestMaxwellSolver1D::buildOneDimOneMatModel(), probes,
 		sources, solverOpts);
 
 	GridFunction eOld = solver.getFieldInDirection(E, X);
@@ -278,53 +308,128 @@ TEST_F(TestMaxwellSolver1D, TwoSourceWaveTravelsToTheRight_SMA)
 	solverOpts.t_final = 0.7;
 	solverOpts.dt = 1e-3;
 
-	Probes probes = TestMaxwellSolver1D::defaultProbes;
-	probes.paraview = true;
+	Probes probes;
+	//probes.paraview = true;
 	probes.vis_steps = 5;
 	probes.extractDataAtPoints = true;
 	DenseMatrix pointMat(1, 2);
 	pointMat.Elem(0, 0) = 0.5;
 	pointMat.Elem(0, 1) = 0.8;
-	probes.integPointMat = pointMat;
+	FieldType fieldToExtract = E;
+	Direction directionToExtract = Y;
+	Probe probe(fieldToExtract, directionToExtract, pointMat);
+	probes.addProbeToVector(probe);
 
 	double spread = 2.0;
 	double coeff = 1.0;
+	double dev = 0.0;
 	Direction d = Y;
 	FieldType ft = E;
-	Source EYFieldSource = Source(testModel, spread, coeff, d, ft);
-	d = Z;
-	ft = H;
-	Source HZFieldSource = Source(testModel, spread, coeff, d, ft);
+	Source EYFieldSource = TestMaxwellSolver1D::buildSourceOneDimOneMat();
+	Source HZFieldSource = TestMaxwellSolver1D::buildSourceOneDimOneMat(51, spread, coeff, dev, Z, H);
 	Sources sources;
 	sources.addSourceToVector(EYFieldSource);
 	sources.addSourceToVector(HZFieldSource);
 
-	maxwell::Solver solver(TestMaxwellSolver1D::testModel, probes,
+	maxwell::Solver solver(TestMaxwellSolver1D::buildOneDimOneMatModel(), probes,
 		sources, solverOpts);
 
 	///////////////////
 
 	solver.run();
-	std::vector<std::pair<double, std::vector<std::array<double, 3>>>> timeField = solver.getFieldAtPoint();
+	Probe probeEY = solver.getProbe(0);
 
 	///////////////////
 
-	std::vector<std::string> stringTime(timeField.size());
-
-	for (int i = 0; i < timeField.size(); i++) {
-		stringTime[i] = std::to_string(timeField[i].first);
-		stringTime[i].resize(5);
+	auto it = HelperFunctions::findTimeId(probeEY.getFieldMovie(), 0.0, 1e-6);
+	if (it == probeEY.getFieldMovie().end()) {
+		GTEST_FATAL_FAILURE_("Time value has not been found within the specified tolerance.");
 	}
-	std::vector<std::string>::iterator itr = std::find(stringTime.begin(), stringTime.end(), "0.30");
-	int initialTimeIndex = 0;
-	if (std::find(stringTime.begin(), stringTime.end(), "0.30") != stringTime.end()) {
-		int index = std::distance(stringTime.begin(), itr);
-		EXPECT_NEAR(timeField.at(initialTimeIndex).second.at(0).at(X), timeField.at(index).second.at(1).at(X), 2e-3);
-	}
-	std::cout << timeField.at(initialTimeIndex).second.at(0).at(X) << std::endl;
-	std::cout << timeField.at(int(0.30/0.001/5)).second.at(1).at(X) << std::endl;
+	auto EYValForFirstPos = it->second.at(0).at(Y);
 
+	auto it2 = HelperFunctions::findTimeId(probeEY.getFieldMovie(), 0.3, 1e-6);
+	if (it2 == probeEY.getFieldMovie().end()) {
+		GTEST_FATAL_FAILURE_("Time value has not been found within the specified tolerance.");
+	}
+	auto EYValForSecondPos = it2->second.at(1).at(Y);
 	
+	EXPECT_NEAR(EYValForSecondPos, EYValForFirstPos, 2e-3);
+
+}
+
+TEST_F(TestMaxwellSolver1D, TwoSourceWaveTwoMaterialsReflection_SMA_PEC)
+{
+	maxwell::Solver::Options solverOpts;
+
+	solverOpts.evolutionOperatorOptions = FiniteElementEvolutionNoCond::Options();
+	solverOpts.t_final = 1.5;
+	solverOpts.dt = 1e-3;
+
+	Probes probes;
+	probes.paraview = true;
+	probes.vis_steps = 10;
+	probes.extractDataAtPoints = true;
+	DenseMatrix pointMat(1, 2);
+	pointMat.Elem(0, 0) = 0.3;
+	pointMat.Elem(0, 1) = 0.1;
+	FieldType fieldToExtract = E;
+	Direction directionToExtract = Y;
+	Probe probe(fieldToExtract, directionToExtract, pointMat);
+	probes.addProbeToVector(probe);
+
+	int meshIntervals = 101;
+	Mesh mesh1D = Mesh::MakeCartesian1D(meshIntervals);
+	DenseMatrix changeAttMat(1,2);
+	changeAttMat.Elem(0, 0) = 0.76;
+	changeAttMat.Elem(0, 1) = 1.0;
+	Array<int> elemID;
+	Array<IntegrationPoint> integPoint;
+	mesh1D.FindPoints(changeAttMat, elemID, integPoint);
+
+	HelperFunctions::setAttributeIntervalMesh(2,elemID,mesh1D);
+
+	std::vector<Material> matVec;
+	matVec.push_back(Material(1.0, 1.0));
+	matVec.push_back(Material(2.0, 1.0));
+	std::vector<Attribute> attVec = std::vector<Attribute>({ 1, 2 });
+	Model model = Model(mesh1D, HelperFunctions::buildAttToMatVec(attVec, matVec));
+
+	double spread = 1.0;
+	double coeff = 0.5;
+	double dev = 0.2;
+	Direction d = Y;
+	FieldType ft = E;
+
+	Source EYFieldSource = Source(model, spread, coeff, dev, d, ft);
+	Source HZFieldSource = Source(model, spread, coeff, dev, Z, H);
+	Sources sources;
+	sources.addSourceToVector(EYFieldSource);
+	sources.addSourceToVector(HZFieldSource);
+
+	maxwell::Solver solver(model, probes,
+		sources, solverOpts);
+
+	///////////////////
+
+	solver.run();
+	Probe probeEY = solver.getProbe(0);
+
+	///////////////////
+
+	auto it = HelperFunctions::findTimeId(probeEY.getFieldMovie(), 0.0, 1e-6);
+	if (it == probeEY.getFieldMovie().end()) {
+		GTEST_FATAL_FAILURE_("Time value has not been found within the specified tolerance.");
+	}
+	auto EYValForFirstPos = it->second.at(0).at(Y);
+
+	auto it2 = HelperFunctions::findTimeId(probeEY.getFieldMovie(), 0.3, 1e-6);
+	if (it2 == probeEY.getFieldMovie().end()) {
+		GTEST_FATAL_FAILURE_("Time value has not been found within the specified tolerance.");
+	}
+	auto EYValForSecondPos = it2->second.at(1).at(Y);
+
+	EXPECT_NEAR(EYValForSecondPos, EYValForFirstPos, 2e-3);
+
 }
 //
 //TEST_F(TestMaxwellSolver1D, oneDimensional_two_materials)

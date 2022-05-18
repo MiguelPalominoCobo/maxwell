@@ -8,7 +8,7 @@ using namespace mfem;
 
 namespace maxwell {
 
-Solver::Solver(const Model& model, const Probes& probes,
+Solver::Solver(const Model& model, Probes& probes,
 const Sources& sources, const Options& options) :
 
 model_(model),
@@ -36,9 +36,7 @@ for (int d = X; d <= Z; d++) {
 	H_[d].SetData(sol_.GetData() + (d+3)*fes_->GetNDofs());
 }
 
-//if (source_) {
-	setInitialField();
-//}
+setInitialField();
 
 if (probes_.paraview) {
 	initializeParaviewData();
@@ -47,14 +45,15 @@ if (probes_.glvis) {
 	//initializeGLVISData(); //TODO
 }
 if (probes_.extractDataAtPoints) {
-	//elemIds_.SetSize(probes_.integPointMat.Width());
-	auto aux = Solver::buildElemAndIntegrationPointArrays(probes_.integPointMat);
-	elemIds_ = aux.first;
-	integPointSet_ = Solver::buildIntegrationPointsSet(aux.second);
-	fieldToExtract_ = probes_.fieldToExtract;
+	for (int i = 0; i < probes_.getProbeVector().size(); i++) {
+		elemIds_.resize(probes_.getProbeVector().size());
+		integPointSet_.resize(probes_.getProbeVector().size());
+		auto elemAndIntPointPairs = Solver::buildElemAndIntegrationPointArrays(probes_.getProbeVector().at(i).getIntegPointMat());
+		elemIds_.at(i) = elemAndIntPointPairs.at(i).first;
+		integPointSet_.at(i) = Solver::buildIntegrationPointsSet(elemAndIntPointPairs.at(i).second);
+	}
 }
 }
-
 void Solver::checkOptionsAreValid(const Options& opts)
 {
 	if ((opts.order < 0) ||
@@ -92,17 +91,14 @@ const GridFunction& Solver::getFieldInDirection(const FieldType& ft, const Direc
 	}
 }
 
-const Vector& Solver::getMaterialProperties(const Material& mat) const
-{
-	return Vector({mat.getPermittivity(), mat.getPermeability(), mat.getImpedance(), mat.getConductance()});
-}
-
-std::pair<Array<int>, Array<IntegrationPoint>> Solver::buildElemAndIntegrationPointArrays(DenseMatrix& physPoints)
+std::vector<std::pair<Array<int>, Array<IntegrationPoint>>> Solver::buildElemAndIntegrationPointArrays(DenseMatrix& physPoints)
 {
 	Array<int> elemIdArray;
 	Array<IntegrationPoint> integPointArray;
+	std::vector<std::pair<Array<int>, Array<IntegrationPoint>>> res;
 	fes_->GetMesh()->FindPoints(physPoints, elemIdArray, integPointArray);
-	return { std::make_pair(elemIdArray, integPointArray) };
+	res.push_back(std::make_pair(elemIdArray, integPointArray));
+	return res;
 }
 
 const std::vector<std::vector<IntegrationPoint>> Solver::buildIntegrationPointsSet(const Array<IntegrationPoint>& ipArray) const
@@ -129,26 +125,33 @@ const std::vector<std::vector<IntegrationPoint>> Solver::buildIntegrationPointsS
 	}
 	return res;
 }
-const std::vector<std::array<double, 3>> Solver::saveFieldAtPoints(const FieldType& ft)
+
+const std::vector<std::vector<std::array<double, 3>>> Solver::saveFieldAtPointsForAllProbes()
 {
-	auto maxDim = fes_->GetMesh()->Dimension();
-	std::vector<std::array<double, 3>> res;
-	res.resize(elemIds_.Size());
-	for (int i = 0; i < elemIds_.Size(); i++) {
-		for (int dir = Direction::X; dir != maxDim; dir++) {
-			Direction d = static_cast<Direction>(dir);
-			switch (ft) {
-			case FieldType::E:
-				res[i][d] = E_[d].GetValue(elemIds_[i],integPointSet_[i][d]);
-				break;
-			case FieldType::H:
-				res[i][d] = H_[d].GetValue(elemIds_[i],integPointSet_[i][d]);
-				break;
+	auto maxDir = model_.getConstMesh().Dimension();
+	std::vector<FieldFrame> res;
+	for (int i = 0; i < probes_.getProbeVector().size(); i++) {
+		FieldFrame aux;
+		aux.resize(elemIds_.at(i).Size());
+		for (int j = 0; j < elemIds_.at(i).Size(); j++) {
+			for (int dir = Direction::X; dir != maxDir; dir++) {
+				Direction d = static_cast<Direction>(dir);
+				switch (probes_.getProbeVector().at(i).getFieldType()) {
+				case FieldType::E:
+					aux[j][probes_.getProbeVector().at(i).getDirection()] = E_[probes_.getProbeVector().at(i).getDirection()].GetValue(elemIds_.at(i)[j], integPointSet_.at(i).at(j)[d]);
+					break;
+				case FieldType::H:
+					aux[j][probes_.getProbeVector().at(i).getDirection()] = H_[probes_.getProbeVector().at(i).getDirection()].GetValue(elemIds_.at(i)[j], integPointSet_.at(i).at(j)[d]);
+					break;
+				}
 			}
 		}
+		res.push_back(aux);
 	}
 	return res;
 }
+
+
 
 
 void Solver::initializeParaviewData()
@@ -205,6 +208,8 @@ void Solver::run()
 
 	double time = 0.0;
 
+
+
 	maxwellEvol_->SetTime(time);
 	odeSolver_->Init(*maxwellEvol_);
 
@@ -212,25 +217,18 @@ void Solver::run()
 
 	bool done = false;
 	int cycle = 0;
-	int iter = 0; 
 	
 	if (probes_.extractDataAtPoints) {
 		timeRecord_ = time;
-		fieldRecord_ = saveFieldAtPoints(fieldToExtract_);
-		timeField_.resize(std::ceil(opts_.t_final / opts_.dt / probes_.vis_steps) +1);
-		timeField_[iter].first = timeRecord_;
-		timeField_[iter].second = fieldRecord_;
-		iter++;
+		fieldRecord_ = saveFieldAtPointsForAllProbes();
+		for (int i = 0; i < probes_.getProbeVector().size(); i++) {
+			probes_.getProbeVector().at(i).getFieldMovie().emplace(timeRecord_, fieldRecord_.at(i));
+		}
 	}
 
 	while (!done) {
 
 		odeSolver_->Step(sol_, time, opts_.dt);
-
-		if (probes_.extractDataAtPoints) {
-			timeRecord_ = time;
-			fieldRecord_ = saveFieldAtPoints(fieldToExtract_);
-		}
 
 		done = (time >= opts_.t_final);
 
@@ -238,9 +236,11 @@ void Solver::run()
 
 		if (done || cycle % probes_.vis_steps == 0) {
 			if (probes_.extractDataAtPoints) {
-				timeField_[iter].first = timeRecord_;
-				timeField_[iter].second = fieldRecord_;
-				iter++;
+				fieldRecord_ = saveFieldAtPointsForAllProbes();
+				for (int i = 0; i < probes_.getProbeVector().size(); i++) {
+					timeRecord_ = time;
+					probes_.getProbeVector().at(i).getFieldMovie().emplace(timeRecord_, fieldRecord_.at(i));
+				}
 			}
 			if (probes_.paraview) {
 				pd_->SetCycle(cycle);
