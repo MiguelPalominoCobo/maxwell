@@ -174,6 +174,44 @@ TEST_F(TestMaxwellSolver1D, checkTwoAttributeMesh)
 		}
 	}
 }
+
+TEST_F(TestMaxwellSolver1D, checkStiffnessMatrix)
+{
+	const double tol = 1e-3;
+	maxwell::Solver::Options solverOpts;
+	// solverOpts.evolutionOperatorOptions = FiniteElementEvolutionNoCond::Options();
+	solverOpts.order = 2;
+	//const int meshIntervals = 1;
+	Probes probes;
+
+	Sources sources;
+	sources.addSourceToVector(TestMaxwellSolver1D::buildSourceOneDimOneMat());
+
+	maxwell::Solver solver(TestMaxwellSolver1D::buildOneDimOneMatModel(), probes, sources, solverOpts);
+
+	maxwell::Solver::Operator stiffnessMatrix = solver.getStiffnessMatrix(X);
+	
+	
+	switch (solverOpts.order) {
+	case 1:
+		EXPECT_NEAR(-0.5, stiffnessMatrix.get()->Elem(0, 0), tol);
+		//EXPECT_NEAR(0.5, stiffnessMatrix.get()->Elem(0, 1), tol);
+		//EXPECT_NEAR(-0.5, stiffnessMatrix.get()->Elem(1, 0), tol);
+		EXPECT_NEAR(0.5, stiffnessMatrix.get()->Elem(1, 1), tol);
+		break; 
+	case 2:
+		EXPECT_NEAR(-5e-1, stiffnessMatrix.get()->Elem(0, 0), tol);
+		//EXPECT_NEAR(6.6667e-1, stiffnessMatrix.get()->Elem(0, 1), tol);
+		//EXPECT_NEAR(-1.6667e-1, stiffnessMatrix.get()->Elem(0, 2), tol);
+		//EXPECT_NEAR(-6.6667e-1, stiffnessMatrix.get()->Elem(1, 0), tol);
+		EXPECT_NEAR(0.0, stiffnessMatrix.get()->Elem(1, 1), tol);
+		/*EXPECT_NEAR(6.6667e-1, stiffnessMatrix.get()->Elem(1, 2), tol);
+		EXPECT_NEAR(1.6667e-1, stiffnessMatrix.get()->Elem(2, 0), tol);
+		EXPECT_NEAR(-6.6667e-1, stiffnessMatrix.get()->Elem(2, 1), tol);
+		EXPECT_NEAR(5e-1, stiffnessMatrix.get()->Elem(2, 2), tol);*/
+		break;
+	}
+}
 TEST_F(TestMaxwellSolver1D, oneDimensional_centered)
 {
 	//DEPRECATED INTRO // REWRITE
@@ -184,7 +222,7 @@ TEST_F(TestMaxwellSolver1D, oneDimensional_centered)
 	First, dimensional variables are declared and a mesh is constructed, along with the declaration
 	of different useful variables.
 
-	Then, a Solver1D object is constructed using said mesh and options, the bounding box for its mesh
+	Then, a Solver object is constructed using said mesh and options, the bounding box for its mesh
 	is extracted and an initial condition is applied to one of its variables. (GridFunction Ez_)
 
 	Lastly, the run() function is called.*/

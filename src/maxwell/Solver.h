@@ -26,11 +26,16 @@ public:
 
     Solver(const Model&, Probes&, const Sources&, const Options&);
 
+    typedef std::unique_ptr<BilinearForm> Operator;
+
     void setInitialField();
     const GridFunction& getFieldInDirection(const FieldType&, const Direction&) const;
     const Probe& getProbe(const std::size_t probe) const { return probes_.getProbeVector().at(probe); }
 
     mfem::Mesh& getMesh() { return mesh_; }
+
+    //Operator getStiffnessMatrix(const FiniteElementEvolutionNoCond&, const Direction&) const;
+    Operator getStiffnessMatrix(const Direction&) const;
 
     void run();
 
@@ -53,6 +58,7 @@ private:
     std::unique_ptr<FiniteElementEvolutionNoCond> maxwellEvol_;
 
     Vector sol_;
+    Operator S_;
 
     std::array<GridFunction, 3> E_, H_;
 

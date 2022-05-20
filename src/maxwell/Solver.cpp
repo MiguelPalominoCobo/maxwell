@@ -25,6 +25,9 @@ fes_ = std::make_unique<FiniteElementSpace>(&mesh_, fec_.get());
 odeSolver_ = std::make_unique<RK4Solver>();
 
 maxwellEvol_ = std::make_unique<FiniteElementEvolutionNoCond>(fes_.get(), opts_.evolutionOperatorOptions, model_);
+//FiniteElementEvolutionNoCond maxwellEvol_(fes_.get(), opts_.evolutionOperatorOptions, model_);
+//Operator S_ = buildDerivativeOperator(maxwellEvol_, X);
+
 
 sol_ = Vector(FiniteElementEvolutionNoCond::numberOfFieldComponents * FiniteElementEvolutionNoCond::numberOfMaxDimensions * fes_->GetNDofs());
 sol_ = 0.0;
@@ -202,7 +205,13 @@ void Solver::storeInitialVisualizationValues()
 	//	H_.Save(hSol);
 	//}
 }
-
+Solver::Operator Solver::getStiffnessMatrix(const Direction& d) const
+{
+	//Operator S = feenc.buildDerivativeOperator(d);
+	//return feenc.buildDerivativeOperator(d);
+	Operator S = maxwellEvol_.get()->buildDerivativeOperator(d);
+	return S;
+}
 void Solver::run()
 {
 

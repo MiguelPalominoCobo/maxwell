@@ -25,13 +25,14 @@ public:
 	virtual void Mult(const Vector& x, Vector& y) const;
 	virtual ~FiniteElementEvolutionNoCond() = default;
 
+	typedef std::unique_ptr<BilinearForm> Operator;
+	Operator buildDerivativeOperator(const Direction&) const;
+
 private:
 	struct FluxCoefficient {
 		double alpha;
 		double beta;
 	};
-
-	typedef std::unique_ptr<BilinearForm> Operator;
 
 	FiniteElementSpace* fes_;
 	Options opts_;
@@ -43,8 +44,7 @@ private:
 
 	Vector buildNVector(const Direction& d) const;
 	Vector buildPieceWiseArgVector(const FieldType& f) const;
-	
-	Operator buildDerivativeOperator(const Direction&) const;
+
 	Operator buildInverseMassMatrix(const FieldType&) const;
 	Operator buildFluxOperator(const FieldType&, const Direction& d) const;
 	Operator buildPenaltyOperator(const FieldType& f, const Direction& d) const;
