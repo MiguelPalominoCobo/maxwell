@@ -21,28 +21,24 @@ public:
         int order = 2;
         double dt = 1e-3;
         double t_final = 1.0;
-        FiniteElementEvolutionNoCond::Options evolutionOperatorOptions;
+        FiniteElementEvolution::Options evolutionOperatorOptions;
     };
 
     Solver(const Model&, Probes&, const Sources&, const Options&);
 
-    typedef std::unique_ptr<BilinearForm> Operator;
-
-    void setInitialField();
     const GridFunction& getFieldInDirection(const FieldType&, const Direction&) const;
-    const Probe& getProbe(const std::size_t probe) const { return probes_.getProbeVector().at(probe); }
+    const PointsProbe& getPointsProbe(const std::size_t probe) { return probes_.getPointsProbes().at(probe); }
 
     mfem::Mesh& getMesh() { return mesh_; }
-
-    //Operator getStiffnessMatrix(const FiniteElementEvolutionNoCond&, const Direction&) const;
-    Operator getStiffnessMatrix(const Direction&) const;
+    const mfem::Mesh& getConstMesh() const { return mesh_; }
+    const std::unique_ptr<FiniteElementEvolution>& getFEEvol() const { return maxwellEvol_; }
 
     void run();
 
 private:
 
     Model model_;
-    Probes& probes_;
+    Probes probes_;
     Sources sources_;
     Options opts_;
     
@@ -55,10 +51,9 @@ private:
 
     mfem::Array<int> boundaryTDoF_;
 
-    std::unique_ptr<FiniteElementEvolutionNoCond> maxwellEvol_;
+    std::unique_ptr<FiniteElementEvolution> maxwellEvol_;
 
     Vector sol_;
-    Operator S_;
 
     std::array<GridFunction, 3> E_, H_;
 
@@ -73,8 +68,10 @@ private:
 
     void checkOptionsAreValid(const Options&);
 
-    std::vector<std::pair<Array<int>, Array<IntegrationPoint>>> Solver::buildElemAndIntegrationPointArrays(DenseMatrix& physPoints);
-    const IntegrationPointsSet Solver::buildIntegrationPointsSet(const Array<IntegrationPoint>& ipArray) const;
+    void Solver::initializeSources();
+
+    const std::pair<Array<int>, Array<IntegrationPoint>> buildElemAndIntegrationPointArrays(DenseMatrix& physPoints) const;
+    const IntegrationPointsSet buildIntegrationPointsSet(const Array<IntegrationPoint>& ipArray) const;
     const std::vector<FieldFrame> saveFieldAtPointsForAllProbes();
 
     void initializeParaviewData();
