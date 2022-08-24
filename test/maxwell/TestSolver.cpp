@@ -488,12 +488,16 @@ TEST_F(TestMaxwellSolver, oneDimensional_upwind_SMA_EZ)
 
 	auto probes = buildProbesWithDefaultPointsProbe(E, Z);
 	//probes.addExporterProbeToCollection(ExporterProbe());
+	probes.addExporterProbeToCollection(ExporterProbe());
+
+	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts(1.0);
+	solverOpts.order = 4;
 
 	maxwell::Solver solver(
 		model,
 		probes,
 		buildSourcesWithDefaultSource(model, E, Z),
-		buildDefaultSolverOpts(1.0));
+		solverOpts);
 
 	GridFunction eOld = solver.getFieldInDirection(E, Z);
 	solver.run();
@@ -726,28 +730,47 @@ TEST_F(TestMaxwellSolver, twoDimensional_centered_NC_MESH) //TODO ADD ENERGY CHE
 	miliseconds, the problem reaches a new peak in field Ez and the maximum value in Ez is not 
 	higher than the initial value.*/
 
-	const char* mesh_file = "star-mixed.mesh";
+	const char* mesh_file = "../maxwell/mesh/star-mixed.mesh";
 	Mesh mesh(mesh_file);
-	mesh.UniformRefinement();
+	mesh.UniformRefinement(6);
 	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
 
 	Probes probes;
-	//probes.addExporterProbeToCollection(ExporterProbe());
-	//probes.vis_steps = 20;
+	probes.addExporterProbeToCollection(ExporterProbe());
+	probes.vis_steps = 20;
 
 	Sources sources;
 	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 })));
 
 	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts(2.92);
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
+	solverOpts.order = 4;
 
 	maxwell::Solver solver(model, probes, sources, solverOpts);
 
-	GridFunction eOld = solver.getFieldInDirection(E, Z);
+	GridFunction eOldX = solver.getFieldInDirection(E, X);
+	GridFunction eOldY = solver.getFieldInDirection(E, Y);
+	GridFunction eOldZ = solver.getFieldInDirection(E, Z);
+	GridFunction hOldX = solver.getFieldInDirection(H, X);
+	GridFunction hOldY = solver.getFieldInDirection(H, Y);
+	GridFunction hOldZ = solver.getFieldInDirection(H, Z);
 	solver.run();
-	GridFunction eNew = solver.getFieldInDirection(E, Z);
+	GridFunction eNewX = solver.getFieldInDirection(E, X);
+	GridFunction eNewY = solver.getFieldInDirection(E, Y);
+	GridFunction eNewZ = solver.getFieldInDirection(E, Z);
+	GridFunction hNewX = solver.getFieldInDirection(H, X);
+	GridFunction hNewY = solver.getFieldInDirection(H, Y);
+	GridFunction hNewZ = solver.getFieldInDirection(H, Z);
 
-	EXPECT_GT(eOld.Max(), eNew.Max());
+	EXPECT_GT(eOldZ.Max(), eNewZ.Max());
+
+	double Eie = pow(eOldX.Norml2(), 2.0) + pow(eOldY.Norml2(), 2.0) + pow(eOldZ.Norml2(), 2.0);
+	double Eih = pow(hOldX.Norml2(), 2.0) + pow(hOldY.Norml2(), 2.0) + pow(hOldZ.Norml2(), 2.0);
+
+	double Efe = pow(eNewX.Norml2(), 2.0) + pow(eNewY.Norml2(), 2.0) + pow(eNewZ.Norml2(), 2.0);
+	double Efh = pow(hNewX.Norml2(), 2.0) + pow(hNewY.Norml2(), 2.0) + pow(hNewZ.Norml2(), 2.0);
+
+	EXPECT_GE(Eie + Eih, Efe + Efh);
 }
 TEST_F(TestMaxwellSolver, twoDimensional_centered_AMR_MESH)
 {
@@ -764,7 +787,7 @@ TEST_F(TestMaxwellSolver, twoDimensional_centered_AMR_MESH)
 	miliseconds, the problem reaches a new peak in field Ez and the maximum value in Ez is not
 	higher than the initial value.*/
 
-	const char* mesh_file = "amr-quad.mesh";
+	const char* mesh_file = "../maxwell/mesh/amr-quad.mesh";
 	Mesh mesh(mesh_file);
 	mesh.UniformRefinement();
 	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
