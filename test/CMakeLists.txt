@@ -14,7 +14,8 @@ add_executable(maxwell_tests
 "maxwell/TestBilinearIntegrators.cpp" 
 "maxwell/TestMaterial.cpp" 
 "maxwell/TestProbes.cpp" 
-"maxwell/TestSources.cpp" 
+"maxwell/TestSources.cpp"  
+"hopfions/TestHopfion.cpp"
 "TestGlobalFunctions.cpp" "TestGlobalFunctions.h")
 
 target_link_libraries(maxwell_tests maxwell_solvers GTest::gtest GTest::gtest_main)

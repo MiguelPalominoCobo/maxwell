@@ -13,6 +13,7 @@ add_library(maxwell_solvers STATIC
 	"Material.h" "Material.cpp"
 	"Model.h" "Model.cpp" 
 	"Probes.h" "Probes.cpp" 
+	"Hopfion.h" "Hopfion.cpp" 
 	"Sources.h" "Sources.cpp")
 
 target_link_libraries(maxwell_solvers mfem)
