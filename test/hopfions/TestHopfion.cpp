@@ -1,10 +1,25 @@
 #include "gtest/gtest.h"
 
 #include "maxwell/Hopfion.h"
+#include "maxwell/Solver.h"
+#include "../TestGlobalFunctions.h"
 
 #include <fstream>
 
+using namespace maxwell;
+
 class TestHopfion : public ::testing::Test {
+protected:
+
+	maxwell::Solver::Options buildDefaultSolverOpts(const double tFinal = 2.0)
+	{
+		maxwell::Solver::Options res;
+
+		res.evolutionOperatorOptions = FiniteElementEvolution::Options();
+		res.t_final = tFinal;
+
+		return res;
+	}
 };
 
 TEST_F(TestHopfion, initialConditionForHopfion) {
@@ -43,12 +58,90 @@ TEST_F(TestHopfion, initialConditionForHopfion) {
 	
 }
 
-TEST_F(TestHopfion, visHopfionWithParaview) {
+TEST_F(TestHopfion, initialConditionForHopfionSolver) {
 
-	/*This test check if it is possible to visualize the hopfion at time 0 with Paraview*/
+	/*This test check the initial condition for the Hopfion using the eval fuctions*/
+
+
+
+	std::string path = "testData/hopfion/";
+
+	std::string casename = "hopfion_p1_q1.txt";
+	Hopfion hopfion(1, 1);
+
+	std::ifstream inputFile;
+	std::string filename = path + casename;
+	inputFile.open(filename);
+	if (!inputFile.is_open()) {
+		throw std::runtime_error("Could not open file: " + filename);
+	}
+
+	while (!inputFile.eof()) {
+		double t, x, y, z, rEx, rEy, rEz, rHx, rHy, rHz;
+
+		inputFile >> t >> x >> y >> z >> rEx >> rEy >> rEz >> rHx >> rHy >> rHz;
+
+		double cEx = hopfion.evalEX(t, x, y, z);
+		double cEy = hopfion.evalEY(t, x, y, z);
+		double cEz = hopfion.evalEZ(t, x, y, z);
+
+		double cHx = hopfion.evalHX(t, x, y, z);
+		double cHy = hopfion.evalHY(t, x, y, z);
+		double cHz = hopfion.evalHZ(t, x, y, z);
+
+
+		EXPECT_NEAR(rEx, cEx, 1e-8);
+		EXPECT_NEAR(rEy, cEy, 1e-8);
+		EXPECT_NEAR(rEz, cEz, 1e-8);
+		EXPECT_NEAR(rHx, cHx, 1e-8);
+		EXPECT_NEAR(rHy, cHy, 1e-8);
+		EXPECT_NEAR(rHz, cHz, 1e-8);
+
+	}
 }
-
 TEST_F(TestHopfion, HopfionRun) {
 
 	/*This test check if it is possible to apply the Solver to run the initial condition of the hopfion.*/
+
+	
+	Mesh mesh = Mesh::MakeCartesian3D(3, 3, 3, Element::Type::HEXAHEDRON);
+	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
+
+	Probes probes;
+	probes.addExporterProbeToCollection(ExporterProbe());
+	probes.vis_steps = 20;
+
+	Sources sources;
+	sources.addSourceToVector(Source(model, E, Y, 2.0, 9.6, Vector({ 0.0, 0.0, 0.0 }), SourceType::Hopfion));
+
+	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts();
+	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
+	//solverOpts.order = 4;
+
+	maxwell::Solver solver(model, probes, sources, solverOpts);
+
+	GridFunction eOldX = solver.getFieldInDirection(E, X);
+	GridFunction eOldY = solver.getFieldInDirection(E, Y);
+	GridFunction eOldZ = solver.getFieldInDirection(E, Z);
+	GridFunction hOldX = solver.getFieldInDirection(H, X);
+	GridFunction hOldY = solver.getFieldInDirection(H, Y);
+	GridFunction hOldZ = solver.getFieldInDirection(H, Z);
+	solver.run();
+	GridFunction eNewX = solver.getFieldInDirection(E, X);
+	GridFunction eNewY = solver.getFieldInDirection(E, Y);
+	GridFunction eNewZ = solver.getFieldInDirection(E, Z);
+	GridFunction hNewX = solver.getFieldInDirection(H, X);
+	GridFunction hNewY = solver.getFieldInDirection(H, Y);
+	GridFunction hNewZ = solver.getFieldInDirection(H, Z);
+
+
+	EXPECT_GT(eOldZ.Max(), eNewZ.Max());
+
+	double Eie = pow(eOldX.Norml2(), 2.0) + pow(eOldY.Norml2(), 2.0) + pow(eOldZ.Norml2(), 2.0);
+	double Eih = pow(hOldX.Norml2(), 2.0) + pow(hOldY.Norml2(), 2.0) + pow(hOldZ.Norml2(), 2.0);
+
+	double Efe = pow(eNewX.Norml2(), 2.0) + pow(eNewY.Norml2(), 2.0) + pow(eNewZ.Norml2(), 2.0);
+	double Efh = pow(hNewX.Norml2(), 2.0) + pow(hNewY.Norml2(), 2.0) + pow(hNewZ.Norml2(), 2.0);
+
+	EXPECT_GE(Eie + Eih, Efe + Efh);
 }

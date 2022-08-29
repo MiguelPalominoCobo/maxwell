@@ -112,7 +112,7 @@ protected:
 		const Vector dev = Vector({ 0.0 })) {
 
 		Sources res;
-		res.addSourceToVector(Source(model, ft, d,  spread, coeff, dev));
+		res.addSourceToVector(Source(model, ft, d,  spread, coeff, dev, SourceType::Gauss));
 		return res;
 	}
 
@@ -596,8 +596,8 @@ TEST_F(TestMaxwellSolver, twoSourceWaveTravelsToTheRight_SMA)
 	//probes.addExporterProbeToCollection(ExporterProbe());
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Y, 2.0, 1.0, Vector({ 0.0 })));
-	sources.addSourceToVector(Source(model, H, Z, 2.0, 1.0, Vector({ 0.0 })));
+	sources.addSourceToVector(Source(model, E, Y, 2.0, 1.0, Vector({ 0.0 }), SourceType::Gauss));
+	sources.addSourceToVector(Source(model, H, Z, 2.0, 1.0, Vector({ 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver solver(
 		model,
@@ -634,8 +634,8 @@ TEST_F(TestMaxwellSolver, twoSourceWaveTwoMaterialsReflection_SMA_PEC)
 	//probes.addExporterProbeToCollection(ExporterProbe());
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Y, 1.0, 0.5, Vector({ 0.2 })));
-	sources.addSourceToVector(Source(model, H, Z, 1.0, 0.5, Vector({ 0.2 })));
+	sources.addSourceToVector(Source(model, E, Y, 1.0, 0.5, Vector({ 0.2 }), SourceType::Gauss));
+	sources.addSourceToVector(Source(model, H, Z, 1.0, 0.5, Vector({ 0.2 }), SourceType::Gauss));
 
 	maxwell::Solver solver(
 		model,
@@ -677,7 +677,7 @@ TEST_F(TestMaxwellSolver, twoDimensional_Periodic) //TODO ADD ENERGY CHECK
 	//probes.vis_steps = 20;
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, X, 1.0, 10.0, Vector({ 0.2, 0.0 })));
+	sources.addSourceToVector(Source(model, E, X, 1.0, 10.0, Vector({ 0.2, 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver solver(model, probes, sources, buildDefaultSolverOpts(1.0));
 
@@ -704,7 +704,7 @@ TEST_F(TestMaxwellSolver, DISABLED_twoDimensional_Periodic_strong) //TODO ADD EN
 	probes.vis_steps = 20;
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, X, 1.0, 10.0, Vector({ 0.0, 0.0 })));
+	sources.addSourceToVector(Source(model, E, X, 1.0, 10.0, Vector({ 0.0, 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver solver(
 		model, 
@@ -740,7 +740,7 @@ TEST_F(TestMaxwellSolver, twoDimensional_centered_NC_MESH) //TODO ADD ENERGY CHE
 	probes.vis_steps = 20;
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 })));
+	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts(2.92);
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
@@ -793,7 +793,7 @@ TEST_F(TestMaxwellSolver, twoDimensional_centered_AMR_MESH)
 	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 })));
+	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts(2.92);
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
@@ -848,7 +848,7 @@ TEST_F(TestMaxwellSolver, twoDimensional_Centered_PEC_EZ)
 	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 })));
+	sources.addSourceToVector(Source(model, E, Z, 2.0, 20.0, Vector({ 0.0, 0.0 }), SourceType::Gauss));
 
 	auto probes = buildProbes2DWithDefaultPointsProbe(E, Z);
 
@@ -905,7 +905,7 @@ TEST_F(TestMaxwellSolver, threeDimensional_centered_PEC_EZ)
 	probes.vis_steps = 20;
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Y, 2.0, 9.6, Vector({ 0.0, 0.0, 0.0 })));
+	sources.addSourceToVector(Source(model, E, Y, 2.0, 9.6, Vector({ 0.0, 0.0, 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts();
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;
@@ -959,7 +959,7 @@ TEST_F(TestMaxwellSolver, threeDimensionalResonantBox)
 	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
 
 	Sources sources;
-	sources.addSourceToVector(Source(model, E, Y, 2.0, 20.0, Vector({ 0.0, 0.0, 0.0 })));
+	sources.addSourceToVector(Source(model, E, Y, 2.0, 20.0, Vector({ 0.0, 0.0, 0.0 }), SourceType::Gauss));
 
 	maxwell::Solver::Options solverOpts = buildDefaultSolverOpts();
 	solverOpts.evolutionOperatorOptions.fluxType = FluxType::Centered;

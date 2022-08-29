@@ -44,5 +44,9 @@ enum class DisForm {
 	Strong
 };
 
+enum class SourceType {
+	Gauss,
+	Hopfion
+};
 
 }

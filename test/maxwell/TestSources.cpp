@@ -27,22 +27,22 @@ protected:
 
 TEST_F(TestMaxwellSources, negSpreadInput)
 {
-	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X, -2.0,  1.0, Vector({0.5})));
+	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X, -2.0,  1.0, Vector({0.5}), SourceType::Gauss));
 }
 
 TEST_F(TestMaxwellSources, negCoeffInput)
 {
-	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X,  2.0, -1.0, Vector({0.5})));
+	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X,  2.0, -1.0, Vector({0.5}), SourceType::Gauss));
 }
 
 TEST_F(TestMaxwellSources, emptyDevInput)
 {
-	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X,  2.0,  1.0, Vector({   })));
+	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X,  2.0,  1.0, Vector({   }), SourceType::Gauss));
 }
 
 TEST_F(TestMaxwellSources, outOfBoundsDevInput1D)
 {
-	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X,  2.0,  1.0, Vector({ 20.0 })));
+	ASSERT_ANY_THROW(Source(buildOneDimOneMatModel(), E, X,  2.0,  1.0, Vector({ 20.0 }), SourceType::Gauss));
 }
 
 TEST_F(TestMaxwellSources, outOfBoundsDevInput2D)
@@ -51,8 +51,8 @@ TEST_F(TestMaxwellSources, outOfBoundsDevInput2D)
 		Mesh::MakeCartesian2D(5, 5, Element::Type::QUADRILATERAL), 
 		AttributeToMaterial(), 
 		AttributeToBoundary());
-	ASSERT_ANY_THROW(Source(model, E, X, 2.0, 1.0, Vector({ 20.0, 0.5 })));
-	ASSERT_ANY_THROW(Source(model, E, X, 2.0, 1.0, Vector({ 0.5, 20.0 })));
+	ASSERT_ANY_THROW(Source(model, E, X, 2.0, 1.0, Vector({ 20.0, 0.5 }), SourceType::Gauss));
+	ASSERT_ANY_THROW(Source(model, E, X, 2.0, 1.0, Vector({ 0.5, 20.0 }), SourceType::Gauss));
 }
 
 

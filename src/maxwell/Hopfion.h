@@ -1,7 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <array>
 #include <complex>
+#include "Types.h"
 
 
 class Hopfion {
@@ -14,13 +16,21 @@ public:
 
 	FieldEH evaluate(double time, Vec3 position) const;
 
+    double evalEX(const double time, const double x, const double y, const double z) const;
+    double evalEY(const double time, const double x, const double y, const double z) const;
+    double evalEZ(const double time, const double x, const double y, const double z) const;
+    double evalHX(const double time, const double x, const double y, const double z) const;
+    double evalHY(const double time, const double x, const double y, const double z) const;
+    double evalHZ(const double time, const double x, const double y, const double z) const;
+
 
 private:
 
 	std::size_t p, q;
 
 
-    double fieldEx(double x, double y, double z, double t) const{
+    double fieldEx(const double t, const double x, const double y, const double z) const
+    {
         double Ex;
         std::complex<double> I(0, 1);
         std::complex<double> Fx;
@@ -31,7 +41,8 @@ private:
         return Ex;
     }
 
-    double fieldHx(double x, double y, double z, double t) const {
+    double fieldHx(const double t, const double x, const double y, const double z) const
+    {
         double Hx;
         std::complex<double> I(0, 1);
         std::complex<double> Fx;
@@ -43,7 +54,8 @@ private:
     }
 
 
-    double fieldEy(double x, double y, double z, double t) const {
+    double fieldEy(const double t, const double x, const double y, const double z) const
+    {
         double Ey;
         std::complex<double> I(0, 1);
         std::complex<double> Fy;
@@ -54,7 +66,8 @@ private:
         return Ey;
     }
 
-    double fieldHy(double x, double y, double z, double t) const {
+    double fieldHy(const double t, const double x, const double y, const double z) const
+    {
         double Hy;
         std::complex<double> I(0, 1);
         std::complex<double> Fy;
@@ -66,7 +79,8 @@ private:
     }
 
 
-    double fieldEz(double x, double y, double z, double t) const {
+    double fieldEz(const double t, const double x, const double y, const double z) const
+    {
         double Ez;
         std::complex<double> I(0, 1);
         std::complex<double> Fz;
@@ -77,7 +91,8 @@ private:
         return Ez;
     }
 
-    double fieldHz(double x, double y, double z, double t) const {
+    double fieldHz(const double t, const double x, const double y, const double z) const
+    {
         double Hz;
         std::complex<double> I(0, 1);
         std::complex<double> Fz;

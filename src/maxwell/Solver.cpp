@@ -82,28 +82,53 @@ void Solver::initializeSources()
 	for (int i = 0; i < sources_.getSourcesVector().size(); i++) {
 		auto source = sources_.getSourcesVector().at(i);
 
-		std::function<double(const Position&)> f = 0;
+		std::function<double(const Position&)> f1 = 0;
+		std::function<double(const Position&)> f2 = 0;
+		std::function<double(const Position&)> f3 = 0;
+
 		
-		switch (model_.getConstMesh().Dimension()) {
-		case 1:
-			f = std::bind(&Source::evalGaussianFunction1D, &source, std::placeholders::_1);
-			break;
-		case 2:
-			f = std::bind(&Source::evalGaussianFunction2D, &source, std::placeholders::_1);
-			break;
-		case 3:
-			f = std::bind(&Source::evalGaussianFunction3D, &source, std::placeholders::_1);
+		switch (source.getSourceType()) {
+		case SourceType::Gauss:
+			switch (model_.getConstMesh().Dimension()) {
+			case 1:
+				f1 = std::bind(&Source::evalGaussianFunction1D, &source, std::placeholders::_1);
+				break;
+			case 2:
+				f1 = std::bind(&Source::evalGaussianFunction2D, &source, std::placeholders::_1);
+				break;
+			case 3:
+				f1 = std::bind(&Source::evalGaussianFunction3D, &source, std::placeholders::_1);
+				break;
+			}
+			break;	
+			switch (source.getFieldType()) {
+			case FieldType::E:
+				E_[source.getDirection()].ProjectCoefficient(FunctionCoefficient(f1));
+				break;
+			case FieldType::H:
+				H_[source.getDirection()].ProjectCoefficient(FunctionCoefficient(f1));
+				break;
+			}
+
+		case SourceType::Hopfion:
+			f1 = std::bind(&Source::evalIniHopfionEX, &source, std::placeholders::_1);
+			f2 = std::bind(&Source::evalIniHopfionEY, &source, std::placeholders::_1);
+			f3 = std::bind(&Source::evalIniHopfionEZ, &source, std::placeholders::_1);
+			E_[X].ProjectCoefficient(FunctionCoefficient(f1));
+			E_[Y].ProjectCoefficient(FunctionCoefficient(f1));
+			E_[Z].ProjectCoefficient(FunctionCoefficient(f1));
+
+			f1 = std::bind(&Source::evalIniHopfionHX, &source, std::placeholders::_1);
+			f2 = std::bind(&Source::evalIniHopfionHY, &source, std::placeholders::_1);
+			f3 = std::bind(&Source::evalIniHopfionHZ, &source, std::placeholders::_1);
+			H_[X].ProjectCoefficient(FunctionCoefficient(f1));
+			H_[Y].ProjectCoefficient(FunctionCoefficient(f1));
+			H_[Z].ProjectCoefficient(FunctionCoefficient(f1));
+
 			break;
 		}
 
-		switch (source.getFieldType()) {
-		case FieldType::E:
-			E_[source.getDirection()].ProjectCoefficient(FunctionCoefficient(f));
-			break;
-		case FieldType::H:
-			H_[source.getDirection()].ProjectCoefficient(FunctionCoefficient(f));
-			break;
-		}
+		
 	}
 }
 
