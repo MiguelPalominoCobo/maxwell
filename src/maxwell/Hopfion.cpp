@@ -10,12 +10,12 @@ Hopfion::Hopfion(std::size_t pIn, std::size_t qIn)
 
 Hopfion::FieldEH Hopfion::evaluate(double time, Vec3 position) const
 {
-    const double x = position[0];
-    const double y = position[1];
-    const double z = position[2];
+    double x = position[0];
+    double y = position[1];
+    double z = position[2];
 
-    const Hopfion::Vec3 E;
-    const Hopfion::Vec3 H;
+    Hopfion::Vec3 E;
+    Hopfion::Vec3 H;
 
     H[0] = fieldHx(time, x, y, z);
     H[1] = fieldHy(time, x, y, z);
@@ -31,33 +31,33 @@ Hopfion::FieldEH Hopfion::evaluate(double time, Vec3 position) const
     return CamposEH;
 
 }
-
-double Hopfion::evalEX(const double time, const double x, const double y, const double z) const
-{
-    return fieldEx(time, x, y, z);
-}
-
-double Hopfion::evalEY(const double time, const double x, const double y, const double z) const
-{
-    return Hopfion::fieldEy(time, x, y, z);
-}
-
-double Hopfion::evalEZ(const double time, const double x, const double y, const double z) const
-{
-    return Hopfion::fieldEz(time, x, y, z);
-}
-
-double Hopfion::evalHX(const double time, const double x, const double y, const double z) const
-{
-    return Hopfion::fieldHx(time, x, y, z);
-}
-
-double Hopfion::evalHY(const double time, const double x, const double y, const double z) const
-{
-    return Hopfion::fieldHy(time, x, y, z);
-}
-
-double Hopfion::evalHZ(const double time, const double x, const double y, const double z) const
-{
-    return Hopfion::fieldHz(time, x, y, z);
-}
+//
+//double Hopfion::evalEX(const double time, const double x, const double y, const double z) const
+//{
+//    return fieldEx(time, x, y, z);
+//}
+//
+//double Hopfion::evalEY(const double time, const double x, const double y, const double z) const
+//{
+//    return Hopfion::fieldEy(time, x, y, z);
+//}
+//
+//double Hopfion::evalEZ(const double time, const double x, const double y, const double z) const
+//{
+//    return Hopfion::fieldEz(time, x, y, z);
+//}
+//
+//double Hopfion::evalHX(const double time, const double x, const double y, const double z) const
+//{
+//    return Hopfion::fieldHx(time, x, y, z);
+//}
+//
+//double Hopfion::evalHY(const double time, const double x, const double y, const double z) const
+//{
+//    return Hopfion::fieldHy(time, x, y, z);
+//}
+//
+//double Hopfion::evalHZ(const double time, const double x, const double y, const double z) const
+//{
+//    return Hopfion::fieldHz(time, x, y, z);
+//}

@@ -5,23 +5,28 @@
 #include <complex>
 #include "Types.h"
 
+#include "mfem.hpp"
+
+
+using namespace maxwell;
 
 class Hopfion {
 public:
 
 	typedef std::array<double, 3> Vec3;
 	typedef std::pair<Vec3, Vec3> FieldEH;
-	
+
 	Hopfion(std::size_t p, std::size_t q);
 
-	FieldEH evaluate(double time, Vec3 position) const;
+	FieldEH evaluate(double time, Vec3 pos) const;
 
-    double evalEX(const double time, const double x, const double y, const double z) const;
-    double evalEY(const double time, const double x, const double y, const double z) const;
-    double evalEZ(const double time, const double x, const double y, const double z) const;
-    double evalHX(const double time, const double x, const double y, const double z) const;
-    double evalHY(const double time, const double x, const double y, const double z) const;
-    double evalHZ(const double time, const double x, const double y, const double z) const;
+    double getEX(const double time, const double x, const double y, const double z) const { return fieldEx(time, x, y, z); }
+    double getEY(const double time, const double x, const double y, const double z) const { return fieldEy(time, x, y, z); }
+    double getEZ(const double time, const double x, const double y, const double z) const { return fieldEz(time, x, y, z); }
+    double getHX(const double time, const double x, const double y, const double z) const { return fieldHx(time, x, y, z); }
+    double getHY(const double time, const double x, const double y, const double z) const { return fieldHy(time, x, y, z); }
+    double getHZ(const double time, const double x, const double y, const double z) const { return fieldHz(time, x, y, z); }
+
 
 
 private:

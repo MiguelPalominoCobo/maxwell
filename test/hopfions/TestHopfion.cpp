@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "maxwell/Hopfion.h"
+#include "maxwell/Types.h"
 #include "maxwell/Solver.h"
 #include "../TestGlobalFunctions.h"
 
@@ -58,11 +59,14 @@ TEST_F(TestHopfion, initialConditionForHopfion) {
 	
 }
 
-TEST_F(TestHopfion, initialConditionForHopfionSolver) {
+TEST_F(TestHopfion, initialConditionForHopfionWithGet) {
 
 	/*This test check the initial condition for the Hopfion using the eval fuctions*/
 
 
+	double rEx, rEy, rEz, rHx, rHy, rHz;
+	double x, y, z;
+	Time t;
 
 	std::string path = "testData/hopfion/";
 
@@ -77,17 +81,16 @@ TEST_F(TestHopfion, initialConditionForHopfionSolver) {
 	}
 
 	while (!inputFile.eof()) {
-		double t, x, y, z, rEx, rEy, rEz, rHx, rHy, rHz;
 
 		inputFile >> t >> x >> y >> z >> rEx >> rEy >> rEz >> rHx >> rHy >> rHz;
 
-		double cEx = hopfion.evalEX(t, x, y, z);
-		double cEy = hopfion.evalEY(t, x, y, z);
-		double cEz = hopfion.evalEZ(t, x, y, z);
+		double cEx = hopfion.getEX(t, x, y, z);
+		double cEy = hopfion.getEY(t, x, y, z);
+		double cEz = hopfion.getEZ(t, x, y, z);
 
-		double cHx = hopfion.evalHX(t, x, y, z);
-		double cHy = hopfion.evalHY(t, x, y, z);
-		double cHz = hopfion.evalHZ(t, x, y, z);
+		double cHx = hopfion.getHX(t, x, y, z);
+		double cHy = hopfion.getHY(t, x, y, z);
+		double cHz = hopfion.getHZ(t, x, y, z);
 
 
 		EXPECT_NEAR(rEx, cEx, 1e-8);
@@ -104,7 +107,7 @@ TEST_F(TestHopfion, HopfionRun) {
 	/*This test check if it is possible to apply the Solver to run the initial condition of the hopfion.*/
 
 	
-	Mesh mesh = Mesh::MakeCartesian3D(3, 3, 3, Element::Type::HEXAHEDRON);
+	Mesh mesh = Mesh::MakeCartesian3D(6, 6, 6, Element::Type::HEXAHEDRON, 3, 3, 3);
 	Model model = Model(mesh, AttributeToMaterial(), AttributeToBoundary());
 
 	Probes probes;
@@ -134,8 +137,6 @@ TEST_F(TestHopfion, HopfionRun) {
 	GridFunction hNewY = solver.getFieldInDirection(H, Y);
 	GridFunction hNewZ = solver.getFieldInDirection(H, Z);
 
-
-	EXPECT_GT(eOldZ.Max(), eNewZ.Max());
 
 	double Eie = pow(eOldX.Norml2(), 2.0) + pow(eOldY.Norml2(), 2.0) + pow(eOldZ.Norml2(), 2.0);
 	double Eih = pow(hOldX.Norml2(), 2.0) + pow(hOldY.Norml2(), 2.0) + pow(hOldZ.Norml2(), 2.0);
