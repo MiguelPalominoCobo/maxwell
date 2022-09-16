@@ -85,7 +85,6 @@ void Solver::initializeSources()
 		std::function<double(const Position&)> f1 = 0;
 		std::function<double(const Position&)> f2 = 0;
 		std::function<double(const Position&)> f3 = 0;
-
 		
 		switch (source.getSourceType()) {
 		case SourceType::Gauss:
@@ -100,7 +99,7 @@ void Solver::initializeSources()
 				f1 = std::bind(&Source::evalGaussianFunction3D, &source, std::placeholders::_1);
 				break;
 			}
-			break;	
+
 			switch (source.getFieldType()) {
 			case FieldType::E:
 				E_[source.getDirection()].ProjectCoefficient(FunctionCoefficient(f1));
@@ -109,6 +108,8 @@ void Solver::initializeSources()
 				H_[source.getDirection()].ProjectCoefficient(FunctionCoefficient(f1));
 				break;
 			}
+
+			break;
 
 		case SourceType::Hopfion:
 			f1 = std::bind(&Source::evalIniHopfionEX, &source, std::placeholders::_1);

@@ -51,9 +51,23 @@ const void Source::checkInputArguments(Model& model)
 			throw std::exception("Mesh dimension and devFromCenter vector size are not the same.");
 		}
 		model.getMesh().GetBoundingBox(minBB_, maxBB_, 0);
+		if (maxBB_[X] <= minBB_[X]) {
+			throw std::exception("The maxBB is lower than minBB in X Direc");
+		}
+		if (maxBB_[Y] <= minBB_[Y]) {
+			throw std::exception("The maxBB is lower than minBB in Y Direc");
+		}
+		if (maxBB_[Z] <= minBB_[Z]) {
+			throw std::exception("The maxBB is lower than minBB in Z Direc");
+		}
 		for (int i = 0; i < devFromCenter_.Size(); i++) {
-			if (devFromCenter_[i] < minBB_[i] || devFromCenter_[i] > maxBB_[i]) {
-				throw std::exception("Deviation from center cannot be smaller than min boundary or bigger than max boundary values.");
+			if (abs(devFromCenter_[i]) < minBB_[i] || abs(devFromCenter_[i]) > maxBB_[i]) {
+				throw std::exception("Deviation from center cannot be smaller than min boundary values.");
+			}
+		}
+		for (int i = 0; i < devFromCenter_.Size(); i++) {
+			if (abs(devFromCenter_[i]) > maxBB_[i]) {
+				throw std::exception("Deviation from center cannot be bigger than max boundary values.");
 			}
 		}
 		if (model.getConstMesh().Dimension() != 3) {
@@ -117,76 +131,63 @@ double Source::normalizedPos3D(const Position& pos) const
 
 }
 
-double Source::evalIniHopfionEX(const Position& pos) const
+Vector Source::hopfionPos3D(const Position& pos) const
 {
 	Vector center = vectorAverage(minBB_, maxBB_);
-	Vector normalizedPos(pos.Size());
-	normalizedPos = 0.0;
-	for (int i = 0; i < normalizedPos.Size(); i++) {
-		normalizedPos[i] = 2 * (pos[i] - center[i] - devFromCenter_[i]) / (maxBB_[i] - minBB_[i]);
+	Vector hopfionPos(pos.Size());
+	hopfionPos = 0.0;
+	for (int i = 0; i < hopfionPos.Size(); i++) {
+		hopfionPos[i] = 10 * (pos[i] - center[i])  + devFromCenter_[i];
 	}
+	return hopfionPos;
+
+}
+
+double Source::evalIniHopfionEX(const Position& pos) const
+{
 	Hopfion hopfion(1, 1);
-	return hopfion.getEX(0, normalizedPos[X], normalizedPos[Y], normalizedPos[Z]);
+	Vector hopfionPos = Source::hopfionPos3D(pos);
+	return hopfion.getEX(-1.5, hopfionPos[X], hopfionPos[Y], hopfionPos[Z]);
+
 }
 
 double Source::evalIniHopfionEY(const Position& pos) const
 {
-	Vector center = vectorAverage(minBB_, maxBB_);
-	Vector normalizedPos(pos.Size());
-	normalizedPos = 0.0;
-	for (int i = 0; i < normalizedPos.Size(); i++) {
-		normalizedPos[i] = 2 * (pos[i] - center[i] - devFromCenter_[i]) / (maxBB_[i] - minBB_[i]);
-	}
 	Hopfion hopfion(1, 1);
-	return hopfion.getEY(0, normalizedPos[X], normalizedPos[Y], normalizedPos[Z]);
+	Vector hopfionPos = Source::hopfionPos3D(pos);
+	return hopfion.getEY(-1.5, hopfionPos[X], hopfionPos[Y], hopfionPos[Z]);
+	//return hopfion.getEY(0, pos[X], pos[Y], pos[Z]);
 }
 
 double Source::evalIniHopfionEZ(const Position& pos) const
 {
-	Vector center = vectorAverage(minBB_, maxBB_);
-	Vector normalizedPos(pos.Size());
-	normalizedPos = 0.0;
-	for (int i = 0; i < normalizedPos.Size(); i++) {
-		normalizedPos[i] = 2 * (pos[i] - center[i] - devFromCenter_[i]) / (maxBB_[i] - minBB_[i]);
-	}
 	Hopfion hopfion(1, 1);
-	return hopfion.getEZ(0, normalizedPos[X], normalizedPos[Y], normalizedPos[Z]);
+	Vector hopfionPos = Source::hopfionPos3D(pos);
+	return hopfion.getEZ(-1.5, hopfionPos[X], hopfionPos[Y], hopfionPos[Z]);
+	//return hopfion.getEZ(0, pos[X], pos[Y], pos[Z]);
 }
 
 double Source::evalIniHopfionHX(const Position& pos) const
 {
-	Vector center = vectorAverage(minBB_, maxBB_);
-	Vector normalizedPos(pos.Size());
-	normalizedPos = 0.0;
-	for (int i = 0; i < normalizedPos.Size(); i++) {
-		normalizedPos[i] = 2 * (pos[i] - center[i] - devFromCenter_[i]) / (maxBB_[i] - minBB_[i]);
-	}
 	Hopfion hopfion(1, 1);
-	return hopfion.getHX(0, normalizedPos[X], normalizedPos[Y], normalizedPos[Z]);
+	Vector hopfionPos = Source::hopfionPos3D(pos);
+	return hopfion.getHX(-1.5, hopfionPos[X], hopfionPos[Y], hopfionPos[Z]);
+	//return hopfion.getHX(0, pos[X], pos[Y], pos[Z]);
 }
 
 double Source::evalIniHopfionHY(const Position& pos) const
 {
-	Vector center = vectorAverage(minBB_, maxBB_);
-	Vector normalizedPos(pos.Size());
-	normalizedPos = 0.0;
-	for (int i = 0; i < normalizedPos.Size(); i++) {
-		normalizedPos[i] = 2 * (pos[i] - center[i] - devFromCenter_[i]) / (maxBB_[i] - minBB_[i]);
-	}
 	Hopfion hopfion(1, 1);
-	return hopfion.getHY(0, normalizedPos[X], normalizedPos[Y], normalizedPos[Z]);
+	Vector hopfionPos = Source::hopfionPos3D(pos);
+	return hopfion.getHX(-1.5, hopfionPos[X], hopfionPos[Y], hopfionPos[Z]);
+	//return hopfion.getHY(0, pos[X], pos[Y], pos[Z]);
 }
 
 double Source::evalIniHopfionHZ(const Position& pos) const
 {
-	Vector center = vectorAverage(minBB_, maxBB_);
-	Vector normalizedPos(pos.Size());
-	normalizedPos = 0.0;
-	for (int i = 0; i < normalizedPos.Size(); i++) {
-		normalizedPos[i] = 2 * (pos[i] - center[i] - devFromCenter_[i]) / (maxBB_[i] - minBB_[i]);
-	}
 	Hopfion hopfion(1, 1);
-	return hopfion.getHZ(0, normalizedPos[X], normalizedPos[Y], normalizedPos[Z]);
+	Vector hopfionPos = Source::hopfionPos3D(pos);
+	return hopfion.getHZ(-1.5, hopfionPos[X], hopfionPos[Y], hopfionPos[Z]);
 }
 
 }

@@ -32,7 +32,6 @@ public:
     mfem::Mesh& getMesh() { return mesh_; }
     const mfem::Mesh& getConstMesh() const { return mesh_; }
     const std::unique_ptr<FiniteElementEvolution>& getFEEvol() const { return maxwellEvol_; }
-
     void run();
 
 private:

@@ -16,9 +16,13 @@ public:
 	double evalGaussianFunction3D(const Position& pos) const;
 	double evalGaussianFunction2D(const Position& pos) const;
 	double evalGaussianFunction1D(const Position& pos) const;
+
 	FieldType getFieldType() const { return fieldType_; }
 	SourceType getSourceType() const { return sourceType_; }
 	Direction getDirection() const { return direction_; }
+	Vector getMinBB() const { return minBB_; }
+	Vector getMaxBB() const { return maxBB_; }
+
 	double evalIniHopfionEX(const Position& pos) const;
 	double evalIniHopfionEY(const Position& pos) const;
 	double evalIniHopfionEZ(const Position& pos) const;
@@ -38,7 +42,8 @@ private:
 
 	static Vector vectorAverage(const Vector& min, const Vector& max);
 	const void checkInputArguments(Model& model);
-	double normalizedPos3D(const Position& pos) const;
+	double normalizedPos3D(const Position& pos) const; 
+	Vector hopfionPos3D(const Position& pos) const;
 };
 
 struct Sources {
@@ -46,6 +51,8 @@ public:
 
 	void addSourceToVector(const Source& source) { sourceVector_.push_back(source); }
 	const std::vector<Source>& getSourcesVector() const { return sourceVector_; }
+	Vector getMinBBi() const { return sourceVector_[0].getMinBB(); }
+	Vector getMaxBBi() const { return sourceVector_[0].getMaxBB(); }
 
 private:
 
